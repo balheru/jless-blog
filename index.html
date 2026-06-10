@@ -1,0 +1,2402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>jless-blog // hacker terminal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #1e1e24;
+      color: #abb2bf;
+      font-family: 'JetBrains Mono', monospace;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* App Logo */
+    .app-logo {
+      color: #61afef;
+      font-weight: 700;
+    }
+
+    .app-logo span {
+      color: #abb2bf;
+    }
+
+    /* Keyboards & Shortcuts */
+    kbd {
+      background: #282c34;
+      color: #abb2bf;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      border: 1px solid #3e4451;
+      font-family: inherit;
+    }
+
+    /* Body Layout */
+    .app-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      width: 25%;
+      height: 100%;
+      min-width: 200px;
+    }
+
+    #dates-pane {
+      height: 50%;
+      border-bottom: 1px solid #282c34;
+    }
+
+    #metadata-pane {
+      height: 50%;
+    }
+
+    #posts-pane {
+      width: 35%;
+      height: 100%;
+      min-width: 250px;
+    }
+
+    #reader-pane {
+      flex: 1;
+      height: 100%;
+      background-color: #18181c;
+      min-width: 300px;
+    }
+
+    .pane {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+      border: 2px solid #282c34;
+      background-color: #1e1e24;
+      transition: border-color 0.15s ease;
+      outline: none;
+    }
+
+    .pane.active-pane {
+      border-color: #61afef !important;
+    }
+
+    /* Active Pager (Reader) State */
+    .reader-active .left-column,
+    .reader-active #posts-pane {
+      display: none !important;
+    }
+
+    .reader-active #reader-pane {
+      width: 100% !important;
+      flex: 1 !important;
+    }
+
+    .pane-header {
+      background-color: #16161a;
+      border-bottom: 1px solid #282c34;
+      padding: 8px 16px;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #61afef;
+      font-weight: 700;
+      user-select: none;
+    }
+
+    .pane-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      position: relative;
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #1e1e24;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #282c34;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3e4451;
+    }
+
+    /* JSON Syntax Highlighting */
+    .json-viewer-body {
+      counter-reset: line-number;
+      font-size: 0.9rem;
+      line-height: 1.6;
+      position: relative;
+    }
+
+    .json-line {
+      counter-increment: line-number;
+      padding-left: 7ch;
+      position: relative;
+      white-space: pre;
+      min-height: 1.6em;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      outline: none;
+    }
+
+    .json-line::before {
+      content: counter(line-number);
+      position: absolute;
+      left: 0;
+      width: 5.5ch;
+      text-align: right;
+      color: #8c96a8;
+      user-select: none;
+      padding-right: 1ch;
+      border-right: 1px solid #282c34;
+    }
+
+    .json-line:hover {
+      background-color: #23272e;
+    }
+
+    .pane.active-pane .json-line.selected {
+      background-color: #2c313c;
+      border-left-color: #61afef;
+    }
+
+    .pane.active-pane .json-line.selected::after {
+      content: '▋';
+      color: #61afef;
+      margin-left: 4px;
+      animation: blink 1s step-end infinite;
+      font-size: 0.85em;
+      vertical-align: middle;
+    }
+
+    .pane:not(.active-pane) .json-line.selected {
+      background-color: #242831;
+      border-left-color: #5c6370;
+    }
+
+    .pane:not(.active-pane) .json-line.selected::after {
+      content: '';
+    }
+
+    @keyframes blink {
+      from, to { color: transparent }
+      50% { color: #61afef }
+    }
+
+    .json-line.selected::before {
+      color: #abb2bf;
+      font-weight: bold;
+    }
+
+    .json-key {
+      color: #e06c75;
+    }
+
+    .json-value.json-string {
+      color: #98c379;
+    }
+
+    .json-value.json-number {
+      color: #d19a66;
+    }
+
+    .json-value.json-boolean {
+      color: #d19a66;
+    }
+
+    .json-value.json-null {
+      color: #5c6370;
+    }
+
+    .bracket, .comma {
+      color: #abb2bf;
+    }
+
+    .toggle-icon {
+      display: inline-block;
+      color: #8c96a8;
+      cursor: pointer;
+      width: 1.5ch;
+      text-align: center;
+      user-select: none;
+    }
+
+    .toggle-icon:hover {
+      color: #abb2bf;
+    }
+
+    .indent {
+      display: inline;
+    }
+
+    .ellipsis {
+      display: none;
+      margin-left: 0.5ch;
+    }
+
+    .ellipsis-badge {
+      color: #5c6370;
+      background-color: #282c34;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-size: 0.8rem;
+      margin: 0 4px;
+      user-select: none;
+    }
+
+    /* Expand / Collapse mechanics */
+    .json-container.collapsed > .json-children,
+    .json-container.collapsed > .json-closing {
+      display: none;
+    }
+
+    .json-container.collapsed > .json-opening .ellipsis {
+      display: inline;
+    }
+
+    .json-container.collapsed > .json-opening .toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    /* Search highlighting */
+    .json-line.search-match {
+      background-color: rgba(229, 192, 123, 0.15);
+      box-shadow: inset 0 -1px 0 #e5c07b;
+    }
+
+    .json-line.search-match.selected {
+      background-color: rgba(229, 192, 123, 0.3);
+      box-shadow: inset 0 -1px 0 #e5c07b, inset 3px 0 0 #61afef;
+    }
+
+    .json-container.filtered-out {
+      display: none !important;
+    }
+
+    /* Reader Pane Styling */
+    .reader-post {
+      max-width: 680px;
+      margin: 0 auto;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.625;
+      color: #abb2bf;
+    }
+
+    .reader-post h1, .reader-post h2, .reader-post h3 {
+      font-family: 'JetBrains Mono', monospace;
+      color: #ffffff;
+      margin-top: 1.6em;
+      margin-bottom: 0.6em;
+      font-weight: 700;
+      line-height: 1.25;
+    }
+
+    .reader-post h1 {
+      font-size: 1.85rem;
+      border-bottom: 1px solid #282c34;
+      padding-bottom: 0.4em;
+      margin-top: 0.4em;
+    }
+
+    .reader-post h2 {
+      font-size: 1.35rem;
+      border-bottom: 1px solid rgba(40, 44, 52, 0.5);
+      padding-bottom: 0.3em;
+    }
+
+    .reader-post h3 {
+      font-size: 1.1rem;
+    }
+
+    .reader-post p {
+      margin-bottom: 1.2em;
+    }
+
+    .reader-post ul {
+      margin-bottom: 1.2em;
+      padding-left: 2em;
+    }
+
+    .reader-post li {
+      margin-bottom: 0.5em;
+    }
+
+    .reader-post code {
+      font-family: 'JetBrains Mono', monospace;
+      background-color: #282c34;
+      color: #e06c75;
+      padding: 3px 6px;
+      border-radius: 4px;
+      font-size: 0.85em;
+    }
+
+    .reader-post pre {
+      background-color: #111115;
+      border: 1px solid #282c34;
+      border-radius: 6px;
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 1.4em;
+    }
+
+    .reader-post pre code {
+      background-color: transparent;
+      color: #abb2bf;
+      padding: 0;
+      border-radius: 0;
+      font-size: 0.82rem;
+    }
+
+    .reader-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      color: #5c6370;
+      margin-bottom: 1.8em;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 1px dashed #282c34;
+      padding-bottom: 12px;
+    }
+
+    .reader-meta-label {
+      color: #61afef;
+      margin-right: 4px;
+    }
+
+    .reader-tag {
+      background-color: #21252b;
+      color: #98c379;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 0.75rem;
+      border: 1px solid #282c34;
+    }
+
+    .reader-empty {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #5c6370;
+      text-align: center;
+      padding: 32px;
+    }
+
+    .reader-empty svg {
+      margin-bottom: 16px;
+      color: #282c34;
+    }
+
+    .reader-empty h2 {
+      font-size: 1.25rem;
+      color: #abb2bf;
+      margin-bottom: 8px;
+    }
+
+    .reader-empty p {
+      font-size: 0.85rem;
+      max-width: 420px;
+      line-height: 1.5;
+    }
+
+    /* Footer & Search Console */
+    .app-footer {
+      background-color: #16161a;
+      border-top: 2px solid #282c34;
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.8rem;
+      color: #5c6370;
+      user-select: none;
+      position: relative;
+      height: 34px;
+    }
+
+    .status-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-right {
+      text-align: right;
+    }
+
+    .search-box {
+      display: none;
+      align-items: center;
+      background-color: #16161a;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 0 16px;
+      z-index: 10;
+    }
+
+    .search-prompt {
+      color: #e5c07b;
+      font-weight: 700;
+      margin-right: 8px;
+    }
+
+    .search-input {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #abb2bf;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      flex: 1;
+    }
+
+    .search-count {
+      color: #5c6370;
+      font-size: 0.75rem;
+      margin-left: 8px;
+    }
+
+    /* Help Overlay */
+    .help-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(22, 22, 26, 0.85);
+      backdrop-filter: blur(3px);
+      z-index: 100;
+      justify-content: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    .help-box {
+      background-color: #1e1e24;
+      border: 2px solid #61afef;
+      border-radius: 8px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
+      width: 600px;
+      max-width: 95%;
+      max-height: 80vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+
+    .help-close-btn {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: #8c96a8;
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 101;
+    }
+
+    .help-close-btn:hover {
+      color: #abb2bf;
+      background-color: #282c34;
+    }
+
+    .help-close-btn:focus {
+      outline: 2px solid #61afef;
+    }
+
+    .help-box::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .help-box::-webkit-scrollbar-thumb {
+      background: #282c34;
+      border-radius: 3px;
+    }
+
+    .help-title {
+      color: #61afef;
+      font-size: 1.15rem;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #282c34;
+      padding-bottom: 8px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .help-grid {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 8px 16px;
+      margin-bottom: 18px;
+      font-size: 0.8rem;
+    }
+
+    .help-key {
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .help-key kbd {
+      background-color: #282c34;
+      border: 1px solid #3e4451;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 0.75rem;
+      color: #abb2bf;
+      font-family: 'JetBrains Mono', monospace;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.3);
+    }
+
+    .help-desc {
+      color: #abb2bf;
+      display: flex;
+      align-items: center;
+    }
+
+    .help-footer {
+      color: #5c6370;
+      text-align: center;
+      border-top: 1px solid #282c34;
+      padding-top: 12px;
+      font-size: 0.75rem;
+    }
+  </style>
+</head>
+<body>
+
+
+  <!-- Split Body Layout -->
+  <main class="app-body">
+    
+    <!-- Left Column: Dates & Metadata -->
+    <div class="left-column" id="left-col">
+      <!-- Dates Pane -->
+      <section class="pane" id="dates-pane" tabindex="-1">
+        <div class="pane-header">Dates</div>
+        <div class="pane-content" id="dates-viewer-content">
+          <div class="json-viewer-body" id="dates-root" role="tree" aria-label="Dates Tree"></div>
+        </div>
+      </section>
+      
+      <!-- Metadata Pane -->
+      <section class="pane" id="metadata-pane" tabindex="-1">
+        <div class="pane-header">Metadata</div>
+        <div class="pane-content" id="metadata-viewer-content">
+          <div class="json-viewer-body" id="metadata-root" role="tree" aria-label="Metadata Tree"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Center Column: Posts Database Viewer -->
+    <section class="pane" id="posts-pane" tabindex="-1">
+      <div class="pane-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+        <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; max-width: 75%;">
+          <span>database.json</span>
+          <span id="breadcrumb-display" style="color: #a0a8b6; font-weight: normal; font-size: 0.7rem; text-transform: none; letter-spacing: normal; overflow: hidden; text-overflow: ellipsis;"></span>
+        </div>
+        <span id="status-line-info" style="flex-shrink: 0;">Line 0/0</span>
+      </div>
+      <div class="pane-content" id="json-viewer-content">
+        <div class="json-viewer-body" id="posts-root" role="tree" aria-label="JSON Database"></div>
+      </div>
+    </section>
+
+    <!-- Right Column: Rendered Blog Post Reader -->
+    <section class="pane" id="reader-pane">
+      <div class="pane-header" id="reader-header-title">Reader: No post selected</div>
+      <div class="pane-content" id="reader-content">
+        <!-- Default Empty State -->
+        <div class="reader-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <h2>jless-blog reader</h2>
+          <p>Navigate the JSON database in the posts pane. Select any key inside a post object or press Enter to read the post content here.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Console Status Bar -->
+  <footer class="app-footer">
+    <div class="status-left">
+      <span class="app-logo" style="margin-right: 16px;">jless-blog<span>.json</span></span>
+      <span>MODE: NORMAL</span>
+      <span id="search-status-indicator" style="display: none; color: #e5c07b; margin-left: 8px;">SEARCH ACTIVE</span>
+      <span id="filter-status-indicator" style="display: none; color: #98c379; font-weight: bold; margin-left: 8px;"></span>
+    </div>
+    <div class="status-right" style="display: flex; align-items: center; gap: 16px;">
+      <span id="key-buffer-display" style="color: #e5c07b; font-weight: bold; min-width: 1ch;"></span>
+      <span style="color: #5c6370;">
+        Press <kbd>?</kbd> for shortcuts reference
+      </span>
+      <span>focused-noether v1.0.0</span>
+    </div>
+
+    <!-- Interactive Search Console Overlay -->
+    <div class="search-box" id="search-console">
+      <span class="search-prompt">/</span>
+      <input type="text" class="search-input" id="search-query-field" placeholder="Search keys/values... (e.g. physics, rust, symmetry)" autocomplete="off" aria-label="Search keys and values">
+      <span class="search-count" id="search-count" aria-live="polite"></span>
+    </div>
+  </footer>
+
+  <!-- Floating Help Menu Overlay -->
+  <div class="help-overlay" id="help-menu" role="dialog" aria-modal="true" aria-labelledby="help-title" tabindex="-1">
+    <div class="help-box">
+      <button class="help-close-btn" id="help-close-btn" aria-label="Close help menu">&times;</button>
+      <div class="help-title" id="help-title">VIM KEYBOARD SHORTCUTS</div>
+      <div class="help-grid">
+        <!-- MOVEMENT -->
+        <div class="help-group-title" style="grid-column: span 2; color: #61afef; border-bottom: 1px dashed #282c34; padding-top: 8px; padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;">[ MOVEMENT ]</div>
+        
+        <div class="help-key"><kbd>j</kbd> / <kbd>↓</kbd></div>
+        <div class="help-desc">Move highlight down one line</div>
+        
+        <div class="help-key"><kbd>k</kbd> / <kbd>↑</kbd></div>
+        <div class="help-desc">Move highlight up one line</div>
+
+        <div class="help-key"><kbd>J</kbd></div>
+        <div class="help-desc">Jump to next sibling at same level</div>
+
+        <div class="help-key"><kbd>K</kbd></div>
+        <div class="help-desc">Jump to previous sibling at same level</div>
+
+        <div class="help-key"><kbd>w</kbd></div>
+        <div class="help-desc">Jump forward to next change in depth</div>
+
+        <div class="help-key"><kbd>b</kbd></div>
+        <div class="help-desc">Jump backward to next change in depth</div>
+
+        <div class="help-key"><kbd>g</kbd><kbd>g</kbd></div>
+        <div class="help-desc">Jump to first visible line</div>
+
+        <div class="help-key"><kbd>G</kbd></div>
+        <div class="help-desc">Jump to last visible line</div>
+
+        <!-- TREE FOLDING -->
+        <div class="help-group-title" style="grid-column: span 2; color: #e5c07b; border-bottom: 1px dashed #282c34; padding-top: 12px; padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;">[ TREE FOLDING ]</div>
+
+        <div class="help-key"><kbd>Space</kbd></div>
+        <div class="help-desc">Toggle collapse/expansion of current node</div>
+
+        <div class="help-key"><kbd>h</kbd> / <kbd>←</kbd></div>
+        <div class="help-desc">Collapse object/array, or jump to parent opening brace</div>
+
+        <div class="help-key"><kbd>l</kbd> / <kbd>→</kbd></div>
+        <div class="help-desc">Expand object/array, or jump to first child node</div>
+
+        <div class="help-key"><kbd>c</kbd></div>
+        <div class="help-desc">Collapse focused node and all its siblings</div>
+
+        <!-- ARTICLE READER -->
+        <div class="help-group-title" style="grid-column: span 2; color: #98c379; border-bottom: 1px dashed #282c34; padding-top: 12px; padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;">[ ARTICLE READER ]</div>
+
+        <div class="help-key"><kbd>Enter</kbd> / <kbd>o</kbd></div>
+        <div class="help-desc">Open article reader view (when highlighting a post)</div>
+
+        <div class="help-key"><kbd>q</kbd> / <kbd>Esc</kbd></div>
+        <div class="help-desc">Close article reader view and return to JSON browser</div>
+
+        <div class="help-key"><kbd>j</kbd> / <kbd>k</kbd></div>
+        <div class="help-desc">Scroll article text down/up line-by-line (Pager Mode)</div>
+
+        <div class="help-key"><kbd>Space</kbd> / <kbd>PgDn</kbd></div>
+        <div class="help-desc">Scroll article text down by page (Pager Mode)</div>
+
+        <!-- SEARCH & FILTER -->
+        <div class="help-group-title" style="grid-column: span 2; color: #c678dd; border-bottom: 1px dashed #282c34; padding-top: 12px; padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;">[ SEARCH & FILTER ]</div>
+
+        <div class="help-key"><kbd>/</kbd></div>
+        <div class="help-desc">Enter search console mode</div>
+
+        <div class="help-key"><kbd>n</kbd> / <kbd>N</kbd></div>
+        <div class="help-desc">Jump to next/previous search query match</div>
+
+        <div class="help-key"><kbd>f</kbd></div>
+        <div class="help-desc">Filter posts by highlighted string value (e.g. tag)</div>
+
+        <!-- GENERAL -->
+        <div class="help-group-title" style="grid-column: span 2; color: #56b6c2; border-bottom: 1px dashed #282c34; padding-top: 12px; padding-bottom: 4px; margin-bottom: 4px; font-weight: bold; font-size: 0.8rem;">[ GENERAL ]</div>
+
+        <div class="help-key"><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd></div>
+        <div class="help-desc">Cycle active focus pane (Dates ⇄ Posts ⇄ Metadata)</div>
+
+        <div class="help-key"><kbd>?</kbd></div>
+        <div class="help-desc">Toggle this keyboard reference guide</div>
+
+        <div class="help-key"><kbd>Esc</kbd></div>
+        <div class="help-desc">Clear search/filter highlights or exit search mode</div>
+      </div>
+      <div class="help-footer">Press any key or click outside to close</div>
+    </div>
+  </div>
+
+  <!-- Javascript Logic -->
+  <script>
+    // Blog JSON Database
+    const BLOG_DATA = {
+      "posts": {
+        "pinned": [
+          {
+            "id": "welcome-to-jless-blog",
+            "title": "Welcome to my Hacker Blog",
+            "date": "2026-06-07",
+            "author": "focused_noether",
+            "tags": ["hacker", "jless", "vim", "ux"],
+            "summary": "An introduction to the terminal-like, keyboard-driven JSON blog concept.",
+            "content": "# Welcome to the jless-blog!\n\nThis is a prototype of a developer-centric blog that behaves like a **JSON terminal viewer** (specifically inspired by `jless` and `less`).\n\n## Why build this?\nAs developers, we spend hours navigating hierarchical files. Graphical user interfaces often introduce visual clutter and force us to move our hands away from the keyboard to use a mouse.\n\nBy representing our blog database as a **pure JSON tree** and adding **Vim keybindings**, we get:\n- **Keyboard-driven efficiency**: Navigate and scan the index without touching the mouse.\n- **Zero-clutter aesthetics**: Syntactically highlighted JSON values are inherently clean.\n- **Hierarchical folding**: Expand what you want to read; collapse what you don't.\n\n## Getting Started\nTry the following keyboard commands right now:\n- Press `j` and `k` to move the cursor up and down the JSON tree in the left pane.\n- Press `l` or `Enter` on any collapsed object (like the elements in the `posts` array) to expand them.\n- Press `h` to collapse an object or jump to its parent opening brace.\n- Press `gg` to jump to the top, and `G` to jump to the bottom.\n- Press `/` to search for text across the database, and cycle matches using `n` and `N`.\n\nEnjoy the prototype! Press `?` at any time to see the help menu."
+          }
+        ],
+        "2026": {
+          "06": [
+            {
+              "id": "understanding-noethers-theorem",
+              "title": "Emmy Noether and the Geometry of Symmetry",
+              "date": "2026-06-08",
+              "author": "focused_noether",
+              "tags": ["physics", "math", "symmetry", "history"],
+              "summary": "A deep dive into Noether's Theorem: the deep connection between conservation laws and physical symmetries.",
+              "content": "# Emmy Noether and the Geometry of Symmetry\n\nIn 1915, the mathematician **Emmy Noether** proved a theorem that became a cornerstone of modern theoretical physics. Her theorem established a mathematically rigorous link between **continuous symmetries** and **conservation laws**.\n\n## The Core Principle\n\nNoether's theorem states:\n> Every continuous, differentiable symmetry of the action of a physical system has a corresponding conservation law.\n\nTo understand this, let's look at three primary examples:\n\n### 1. Time Translation Symmetry\nIf a physical experiment behaves the same way today as it does tomorrow (meaning the equations of motion are invariant under a shift in time), then **Energy** is conserved.\n\n### 2. Space Translation Symmetry\nIf the laws of physics do not depend on *where* you are in the universe (invariance under spatial translations), then **Linear Momentum** is conserved.\n\n### 3. Rotational Symmetry\nIf the orientation of an experiment in space does not change its outcome (invariance under rotation), then **Angular Momentum** is conserved.\n\n## Mathematical Action\nIn classical mechanics, the path a particle takes is the one that minimizes the **Action** ($S$), which is the integral of the Lagrangian ($L = T - V$):\n\n```\nS = ∫ L(q, dq/dt, t) dt\n```\n\nWhen we apply an infinitesimal transformation to the coordinates `q` that leaves `L` invariant (up to a total derivative), Noether's theorem constructs a conserved charge `Q` such that:\n\n```\ndQ/dt = 0\n```\n\nThis simple yet deep connection remains the foundation of the Standard Model of particle physics and general relativity."
+            },
+            {
+              "id": "keyboard-driven-javascript",
+              "title": "Building Focus-Controlled Keyboard Interfaces in JS",
+              "date": "2026-06-09",
+              "author": "focused_noether",
+              "tags": ["javascript", "keyboard", "accessibility", "ux"],
+              "summary": "Technical tips for managing focus, keyboard event trapping, and dynamic lists in vanilla Javascript.",
+              "content": "# Keyboard-Driven Web Interfaces\n\nWeb browsers are fundamentally designed for mouse and touch interactions. Creating a seamless **keyboard-driven interface** (like a Vim clone) requires overcoming default browser behaviors and managing element focus carefully.\n\n## Listening for Keyboard Events\nTo build a keyboard interface, capture key events globally on the window:\n\n```javascript\nwindow.addEventListener('keydown', (event) => {\n  // 1. Skip if typing in an input\n  if (document.activeElement.tagName === 'INPUT') return;\n  \n  // 2. Prevent default scrolling for navigation keys\n  if (['j', 'k', 'ArrowUp', 'ArrowDown', ' '].includes(event.key)) {\n    event.preventDefault();\n  }\n  \n  // 3. Dispatch to key router\n  handleKey(event.key);\n});\n```\n\n## Focus and Accessibility\nWhen using custom keyboard navigation, screen readers must still understand the structure. Here are best practices:\n- Use `tabindex=\"-1\"` on custom selectable lines to make them focusable programmatically, but not reachable via normal Tab key cycles.\n- Keep track of an active selection index and set `element.focus()` or use `aria-activedescendant` on a parent listbox wrapper.\n- Ensure `scrollIntoView({ block: 'nearest' })` is used so the highlighted element stays in the viewport without causing jarring layout shifts.\n\n## Finding Visible Lines\nIn a collapsible tree, not all DOM elements are visible. When navigating with `j` and `k`, we must skip collapsed lines. The most efficient way to query visible elements in a tree is checking their size:\n\n```javascript\nfunction getVisibleLines() {\n  return Array.from(document.querySelectorAll('.json-line'))\n              .filter(el => el.offsetParent !== null);\n}\n```\n\n`offsetParent` returns `null` if the element (or any parent) is hidden via `display: none`. This allows CSS to handle the tree folding and JS to automatically adapt its navigation list."
+            }
+          ]
+        }
+      },
+      "name": "hacker_noether_blog",
+      "version": "1.0.0",
+      "description": "JSON-structured terminal blog with Vim keyboard navigation.",
+      "author": {
+        "alias": "focused_noether",
+        "git": "github.com/focused-noether",
+        "specialty": "Theoretical Physics & Code Craftsmanship"
+      }
+    };
+
+    // Navigation and State Variables
+    const panels = {
+      dates: {
+        id: 'dates',
+        rootId: 'dates-root',
+        selectedIndex: 0,
+        cachedVisibleLines: null
+      },
+      posts: {
+        id: 'posts',
+        rootId: 'posts-root',
+        selectedIndex: 0,
+        cachedVisibleLines: null
+      },
+      metadata: {
+        id: 'metadata',
+        rootId: 'metadata-root',
+        selectedIndex: 0,
+        cachedVisibleLines: null
+      }
+    };
+    let activePanelId = 'posts';
+    let lastKeyPressed = '';
+    let isSearchMode = false;
+    let isHelpMode = false;
+    let lastActiveElementBeforeHelp = null;
+    let matchedLines = [];
+    let matchedIndex = -1;
+    let currentPostId = null;
+    let activeTagFilter = null;
+    let activeYearFilter = null;
+    let activeMonthFilter = null;
+    let activePostIdFilter = null;
+    let activeSectionFilter = null;
+
+    function invalidateVisibleLines(panelId = activePanelId) {
+      if (panels[panelId]) {
+        panels[panelId].cachedVisibleLines = null;
+      }
+    }
+
+    function updateAriaExpanded(container) {
+      if (!container) return;
+      const openingLine = container.querySelector(':scope > .json-opening');
+      if (openingLine) {
+        const isCollapsed = container.classList.contains('collapsed');
+        openingLine.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+      }
+    }
+
+    // DOM Elements Cache
+    const datesRoot = document.getElementById('dates-root');
+    const metadataRoot = document.getElementById('metadata-root');
+    const postsRoot = document.getElementById('posts-root');
+    const searchConsole = document.getElementById('search-console');
+    const searchQueryField = document.getElementById('search-query-field');
+    const searchCount = document.getElementById('search-count');
+    const searchIndicator = document.getElementById('search-status-indicator');
+    const helpMenu = document.getElementById('help-menu');
+    const readerContent = document.getElementById('reader-content');
+    const readerHeaderTitle = document.getElementById('reader-header-title');
+    const statusLineInfo = document.getElementById('status-line-info');
+
+    // Dynamic JSON DOM Renderer
+    function createJSONDOM(key, value, isLast, depth, path, stripQuotes = false) {
+      const container = document.createElement('div');
+      container.className = 'json-container';
+      container.dataset.path = path;
+
+      const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
+      const isArray = Array.isArray(value);
+
+      if (isObject || isArray) {
+        // If this represents a blog post object, tag it for easy query
+        const isPost = isObject && value.id && value.title;
+        if (isPost) {
+          container.dataset.postId = value.id;
+        }
+
+        const bracketOpen = isObject ? '{' : '[';
+        const bracketClose = isObject ? '}' : ']';
+
+        // Opening line
+        const openingLine = document.createElement('div');
+        openingLine.className = 'json-line json-opening';
+        openingLine.tabIndex = -1;
+        openingLine.dataset.depth = depth;
+        openingLine.setAttribute('role', 'treeitem');
+        openingLine.setAttribute('aria-selected', 'false');
+        openingLine.setAttribute('aria-expanded', 'true');
+
+        const indentSpan = document.createElement('span');
+        indentSpan.className = 'indent';
+        indentSpan.textContent = '  '.repeat(depth);
+        openingLine.appendChild(indentSpan);
+
+        const toggleSpan = document.createElement('span');
+        toggleSpan.className = 'toggle-icon';
+        toggleSpan.textContent = '▼';
+        openingLine.appendChild(toggleSpan);
+
+        if (key) {
+          const keySpan = document.createElement('span');
+          keySpan.className = 'json-key';
+          keySpan.textContent = stripQuotes ? key : `"${key}"`;
+          openingLine.appendChild(keySpan);
+
+          const colonText = document.createTextNode(': ');
+          openingLine.appendChild(colonText);
+        }
+
+        const openBracket = document.createElement('span');
+        openBracket.className = 'bracket';
+        openBracket.textContent = bracketOpen;
+        openingLine.appendChild(openBracket);
+
+        const hasTitle = isObject && (value.title || value.name);
+        const ellipsisSpan = document.createElement('span');
+        ellipsisSpan.className = 'ellipsis';
+        if (hasTitle) {
+          const displayTitle = value.title || value.name;
+          const keyName = value.title ? 'title' : 'name';
+          if (stripQuotes) {
+            ellipsisSpan.innerHTML = ` <span class="json-key">${keyName}</span>: <span class="json-value json-string">${displayTitle}</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
+          } else {
+            ellipsisSpan.innerHTML = ` <span class="json-key">"${keyName}"</span>: <span class="json-value json-string">"${displayTitle}"</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
+          }
+        } else {
+          const bracketClose = isObject ? '}' : ']';
+          ellipsisSpan.innerHTML = `<span class="ellipsis-badge">...</span>${bracketClose}${isLast ? '' : ','}`;
+        }
+        openingLine.appendChild(ellipsisSpan);
+
+        container.appendChild(openingLine);
+
+        // Children Wrapper
+        const childrenWrapper = document.createElement('div');
+        childrenWrapper.className = 'json-children';
+        childrenWrapper.setAttribute('role', 'group');
+
+        const entries = isObject ? Object.entries(value) : Array.from(value.entries());
+        if (isObject) {
+          // Check if this object is a blog post
+          const isPost = value.id !== undefined && value.title !== undefined;
+          
+          entries.sort((a, b) => {
+            const keyA = a[0];
+            const keyB = b[0];
+            
+            if (isPost) {
+              const postKeyOrder = ['title', 'date', 'author', 'tags', 'summary', 'id', 'content'];
+              const idxA = postKeyOrder.indexOf(keyA);
+              const idxB = postKeyOrder.indexOf(keyB);
+              if (idxA !== -1 && idxB !== -1) {
+                return idxA - idxB;
+              }
+              if (idxA !== -1) return -1;
+              if (idxB !== -1) return 1;
+              return keyA.localeCompare(keyB);
+            }
+
+            if (keyA === 'ALL') return -1;
+            if (keyB === 'ALL') return 1;
+            if (keyA === 'posts') return -1;
+            if (keyB === 'posts') return 1;
+            if (keyA === 'pinned') return -1;
+            if (keyB === 'pinned') return 1;
+            
+            const isYearA = /^\d{4}$/.test(keyA);
+            const isYearB = /^\d{4}$/.test(keyB);
+            if (isYearA && isYearB) {
+              return parseInt(keyB, 10) - parseInt(keyA, 10);
+            }
+            
+            const isMonthA = /^\d{2}$/.test(keyA);
+            const isMonthB = /^\d{2}$/.test(keyB);
+            if (isMonthA && isMonthB) {
+              return parseInt(keyB, 10) - parseInt(keyA, 10);
+            }
+            
+            return keyA.localeCompare(keyB);
+          });
+        }
+        entries.forEach(([k, v], idx) => {
+          const childIsLast = idx === entries.length - 1;
+          const childKey = isObject ? k : null;
+          const childPath = path ? `${path}.${k !== null ? k : idx}` : `${k !== null ? k : idx}`;
+          const childDOM = createJSONDOM(childKey, v, childIsLast, depth + 1, childPath, stripQuotes);
+          childrenWrapper.appendChild(childDOM);
+        });
+
+        container.appendChild(childrenWrapper);
+
+        // Closing line
+        const closingLine = document.createElement('div');
+        closingLine.className = 'json-line json-closing';
+        closingLine.tabIndex = -1;
+        closingLine.dataset.depth = depth;
+        closingLine.setAttribute('role', 'treeitem');
+        closingLine.setAttribute('aria-selected', 'false');
+
+        const closeIndentSpan = document.createElement('span');
+        closeIndentSpan.className = 'indent';
+        closeIndentSpan.textContent = '  '.repeat(depth);
+        closingLine.appendChild(closeIndentSpan);
+
+        // closing spacing alignment matches key spacing
+        const toggleSpacer = document.createElement('span');
+        toggleSpacer.className = 'toggle-icon';
+        toggleSpacer.style.visibility = 'hidden';
+        toggleSpacer.textContent = ' ';
+        closingLine.appendChild(toggleSpacer);
+
+        const closeBracket = document.createElement('span');
+        closeBracket.className = 'bracket';
+        closeBracket.textContent = bracketClose;
+        closingLine.appendChild(closeBracket);
+
+        if (!isLast) {
+          const commaSpan = document.createElement('span');
+          commaSpan.className = 'comma';
+          commaSpan.textContent = ',';
+          closingLine.appendChild(commaSpan);
+        }
+
+        container.appendChild(closingLine);
+
+      } else {
+        // Leaf values
+        if (typeof value === 'string') {
+          container.dataset.value = value;
+        }
+        const leafLine = document.createElement('div');
+        leafLine.className = 'json-line json-leaf';
+        leafLine.tabIndex = -1;
+        leafLine.dataset.depth = depth;
+        leafLine.setAttribute('role', 'treeitem');
+        leafLine.setAttribute('aria-selected', 'false');
+
+        const indentSpan = document.createElement('span');
+        indentSpan.className = 'indent';
+        indentSpan.textContent = '  '.repeat(depth);
+        leafLine.appendChild(indentSpan);
+
+        const toggleSpacer = document.createElement('span');
+        toggleSpacer.className = 'toggle-icon';
+        toggleSpacer.style.visibility = 'hidden';
+        toggleSpacer.textContent = ' ';
+        leafLine.appendChild(toggleSpacer);
+
+        if (key) {
+          const keySpan = document.createElement('span');
+          keySpan.className = 'json-key';
+          keySpan.textContent = stripQuotes ? key : `"${key}"`;
+          leafLine.appendChild(keySpan);
+
+          const colonText = document.createTextNode(': ');
+          leafLine.appendChild(colonText);
+        }
+
+        const valueSpan = document.createElement('span');
+        let valueClass = 'json-null';
+        let valText = 'null';
+
+        if (value === null) {
+          valueClass = 'json-null';
+          valText = 'null';
+        } else if (typeof value === 'string') {
+          valueClass = 'json-string';
+          valText = stripQuotes ? value : `"${value}"`;
+        } else if (typeof value === 'number') {
+          valueClass = 'json-number';
+          valText = String(value);
+        } else if (typeof value === 'boolean') {
+          valueClass = 'json-boolean';
+          valText = String(value);
+        }
+
+        valueSpan.className = `json-value ${valueClass}`;
+        valueSpan.textContent = valText;
+        leafLine.appendChild(valueSpan);
+
+        if (!isLast) {
+          const commaSpan = document.createElement('span');
+          commaSpan.className = 'comma';
+          commaSpan.textContent = ',';
+          leafLine.appendChild(commaSpan);
+        }
+
+        container.appendChild(leafLine);
+      }
+
+      return container;
+    }
+
+    // Retrieve active visible lines
+    function getVisibleLines(panelId = activePanelId) {
+      const panel = panels[panelId];
+      if (!panel) return [];
+      if (!panel.cachedVisibleLines) {
+        const root = document.getElementById(panel.rootId);
+        if (!root) return [];
+        panel.cachedVisibleLines = Array.from(root.querySelectorAll('.json-line'))
+                                      .filter(el => el.offsetParent !== null);
+      }
+      return panel.cachedVisibleLines;
+    }
+
+    // Parse path to produce human-readable object notation breadcrumbs
+    function formatBreadcrumbs(path) {
+      if (!path) return "";
+      const parts = path.split('.');
+      let result = [];
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        if (part === 'root') continue;
+        
+        if (!isNaN(part)) {
+          if (result.length > 0) {
+            result[result.length - 1] += `[${part}]`;
+          } else {
+            result.push(`[${part}]`);
+          }
+        } else {
+          result.push(part);
+        }
+      }
+      return result.join(' > ');
+    }
+
+    // Helper to find a post by its ID in the nested posts object structure
+    function findPostById(postId) {
+      if (!BLOG_DATA.posts) return null;
+      
+      // 1. Search in pinned array
+      if (Array.isArray(BLOG_DATA.posts.pinned)) {
+        const post = BLOG_DATA.posts.pinned.find(p => p.id === postId);
+        if (post) return post;
+      }
+      
+      // 2. Search in yearly / monthly sub-objects
+      for (const year in BLOG_DATA.posts) {
+        if (year === 'pinned') continue;
+        const yearObj = BLOG_DATA.posts[year];
+        if (yearObj && typeof yearObj === 'object') {
+          for (const month in yearObj) {
+            const monthArray = yearObj[month];
+            if (Array.isArray(monthArray)) {
+              const post = monthArray.find(p => p.id === postId);
+              if (post) return post;
+            }
+          }
+        }
+      }
+      return null;
+    }
+
+    // Update highlights and focus selection index
+    function updateSelection(newIndex, panelId = activePanelId) {
+      const panel = panels[panelId];
+      if (!panel) return;
+      
+      const visibleLines = getVisibleLines(panelId);
+      if (visibleLines.length === 0) return;
+
+      if (newIndex < 0) newIndex = 0;
+      if (newIndex >= visibleLines.length) newIndex = visibleLines.length - 1;
+
+      const root = document.getElementById(panel.rootId);
+      const prevSelected = root ? root.querySelector('.json-line.selected') : null;
+      if (prevSelected) {
+        prevSelected.classList.remove('selected');
+        prevSelected.setAttribute('aria-selected', 'false');
+      }
+
+      panel.selectedIndex = newIndex;
+      const currentLine = visibleLines[panel.selectedIndex];
+      currentLine.classList.add('selected');
+      currentLine.setAttribute('aria-selected', 'true');
+      
+      if (panelId === activePanelId) {
+        currentLine.focus();
+      }
+
+      // Programmatic scroll management
+      currentLine.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+
+      // Synchronize reader pane content
+      if (panelId === 'posts') {
+        syncReaderView(currentLine);
+      } else if (panelId === 'dates') {
+        handleDateSelectionChange(currentLine);
+      }
+
+      // Update breadcrumbs display
+      if (panelId === activePanelId) {
+        const container = currentLine.closest('.json-container');
+        const breadcrumbDisplay = document.getElementById('breadcrumb-display');
+        if (container && breadcrumbDisplay) {
+          breadcrumbDisplay.textContent = `${panelId.toUpperCase()} > ${formatBreadcrumbs(container.dataset.path)}`;
+        } else if (breadcrumbDisplay) {
+          breadcrumbDisplay.textContent = '';
+        }
+      }
+    }
+
+    function switchPanel(panelId) {
+      if (!panels[panelId]) return;
+      
+      const oldPane = document.getElementById(`${activePanelId}-pane`);
+      if (oldPane) {
+        oldPane.classList.remove('active-pane');
+      }
+      
+      activePanelId = panelId;
+      
+      const newPane = document.getElementById(`${activePanelId}-pane`);
+      if (newPane) {
+        newPane.classList.add('active-pane');
+      }
+      
+      const panel = panels[activePanelId];
+      updateSelection(panel.selectedIndex, activePanelId);
+      
+      const visibleLines = getVisibleLines(activePanelId);
+      if (visibleLines[panel.selectedIndex]) {
+        visibleLines[panel.selectedIndex].focus();
+      }
+      
+      restoreNormalStatusMode();
+    }
+
+    // Collapse/Expand operations
+    function handleCollapseKey() {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId].selectedIndex;
+      const currentLine = visibleLines[selIdx];
+      if (!currentLine) return;
+
+      const container = currentLine.closest('.json-container');
+      
+      // Case 1: Highlighted opening node is expanded -> collapse it
+      if (container && currentLine.classList.contains('json-opening') && !container.classList.contains('collapsed')) {
+        container.classList.add('collapsed');
+        updateAriaExpanded(container);
+        invalidateVisibleLines(activePanelId);
+        updateSelection(selIdx, activePanelId);
+        return;
+      }
+
+      // Case 2: Already collapsed or on leaf -> jump to parent container opening node
+      const parentContainer = currentLine.parentElement.closest('.json-container');
+      if (parentContainer) {
+        const parentOpening = parentContainer.querySelector(':scope > .json-opening');
+        if (parentOpening && parentOpening !== currentLine) {
+          const idx = visibleLines.indexOf(parentOpening);
+          if (idx !== -1) {
+            updateSelection(idx, activePanelId);
+          }
+        }
+      }
+    }
+
+    function handleExpandKey() {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId].selectedIndex;
+      const currentLine = visibleLines[selIdx];
+      if (!currentLine) return;
+
+      const container = currentLine.closest('.json-container');
+
+      // Case 1: Highlighted opening node is collapsed -> expand it
+      if (container && currentLine.classList.contains('json-opening')) {
+        if (container.classList.contains('collapsed')) {
+          container.classList.remove('collapsed');
+          updateAriaExpanded(container);
+          invalidateVisibleLines(activePanelId);
+          updateSelection(selIdx, activePanelId);
+        } else {
+          // If already expanded, move to the first child element
+          updateSelection(selIdx + 1, activePanelId);
+        }
+      }
+    }
+
+    function handleSiblingNavigation(direction) {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId].selectedIndex;
+      const currentLine = visibleLines[selIdx];
+      if (!currentLine) return;
+
+      const currentContainer = currentLine.closest('.json-container');
+      if (!currentContainer) return;
+
+      let targetContainer;
+      if (direction === 1) {
+        targetContainer = currentContainer.nextElementSibling;
+      } else {
+        targetContainer = currentContainer.previousElementSibling;
+      }
+
+      if (targetContainer && targetContainer.classList.contains('json-container')) {
+        const targetLine = targetContainer.querySelector('.json-opening, .json-leaf');
+        if (targetLine) {
+          const idx = visibleLines.indexOf(targetLine);
+          if (idx !== -1) {
+            updateSelection(idx, activePanelId);
+          }
+        }
+      }
+    }
+
+    // Depth-Jump Navigation (w / b)
+    function handleDepthJump(direction) {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId].selectedIndex;
+      const currentLine = visibleLines[selIdx];
+      if (!currentLine) return;
+
+      const currentDepth = parseInt(currentLine.dataset.depth, 10);
+      
+      if (direction === 1) {
+        for (let i = selIdx + 1; i < visibleLines.length; i++) {
+          const lineDepth = parseInt(visibleLines[i].dataset.depth, 10);
+          if (lineDepth !== currentDepth) {
+            updateSelection(i, activePanelId);
+            break;
+          }
+        }
+      } else {
+        for (let i = selIdx - 1; i >= 0; i--) {
+          const lineDepth = parseInt(visibleLines[i].dataset.depth, 10);
+          if (lineDepth !== currentDepth) {
+            updateSelection(i, activePanelId);
+            break;
+          }
+        }
+      }
+    }
+
+    // Collapse Focused Node and All Siblings (c)
+    function handleCollapseSiblings() {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId].selectedIndex;
+      const currentLine = visibleLines[selIdx];
+      if (!currentLine) return;
+
+      const currentContainer = currentLine.closest('.json-container');
+      if (!currentContainer) return;
+
+      const parentChildrenWrapper = currentContainer.parentElement;
+      if (!parentChildrenWrapper || !parentChildrenWrapper.classList.contains('json-children')) return;
+
+      const siblings = Array.from(parentChildrenWrapper.querySelectorAll(':scope > .json-container'));
+      siblings.forEach(sibling => {
+        sibling.classList.add('collapsed');
+        updateAriaExpanded(sibling);
+      });
+      invalidateVisibleLines(activePanelId);
+
+      const openingLine = currentContainer.querySelector(':scope > .json-opening');
+      if (openingLine) {
+        const updatedVisibleLines = getVisibleLines(activePanelId);
+        const idx = updatedVisibleLines.indexOf(openingLine);
+        if (idx !== -1) {
+          updateSelection(idx, activePanelId);
+        }
+      }
+    }
+
+    // Dates and Tags Filtering Combine logic
+    function extractDates() {
+      // 1. Get pinned posts
+      const pinnedList = [];
+      if (Array.isArray(BLOG_DATA.posts.pinned)) {
+        BLOG_DATA.posts.pinned.forEach(p => {
+          pinnedList.push(p.id);
+        });
+      }
+
+      // 2. Get recent posts (last 10 posts sorted by date descending)
+      const allPosts = [];
+      for (const year in BLOG_DATA.posts) {
+        if (year === 'pinned') continue;
+        const yearData = BLOG_DATA.posts[year];
+        for (const month in yearData) {
+          const monthData = yearData[month];
+          if (Array.isArray(monthData)) {
+            allPosts.push(...monthData);
+          }
+        }
+      }
+      // Sort allPosts by date descending
+      allPosts.sort((a, b) => b.date.localeCompare(a.date));
+      const recentPosts = allPosts.slice(0, 10);
+      const recentList = [];
+      recentPosts.forEach(p => {
+        recentList.push(p.id);
+      });
+
+      // 3. Get normal dates/years
+      const yearsList = {};
+      const years = Object.keys(BLOG_DATA.posts).filter(y => y !== 'pinned' && /^\d{4}$/.test(y));
+      years.sort((a, b) => parseInt(b) - parseInt(a));
+      
+      const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+      years.forEach(year => {
+        yearsList[year] = {};
+        const months = Object.keys(BLOG_DATA.posts[year]).filter(m => /^\d{2}$/.test(m));
+        months.sort((a, b) => parseInt(b) - parseInt(a));
+        
+        months.forEach(month => {
+          const monthIdx = parseInt(month, 10) - 1;
+          const monthName = MONTH_NAMES[monthIdx];
+          const postsCount = BLOG_DATA.posts[year][month].length;
+          const label = `${postsCount} post${postsCount === 1 ? '' : 's'}`;
+          yearsList[year][monthName] = label;
+        });
+      });
+
+      return {
+        "pinned": pinnedList,
+        "recent": recentList,
+        "years": yearsList
+      };
+    }
+
+    function handleDateSelectionChange(currentLine) {
+      const container = currentLine.closest('.json-container');
+      if (!container || !container.dataset.path) {
+        activeYearFilter = null;
+        activeMonthFilter = null;
+        activePostIdFilter = null;
+        activeSectionFilter = null;
+        renderFilteredPosts();
+        return;
+      }
+      
+      const path = container.dataset.path;
+      const parts = path.split('.');
+      
+      // Reset filters
+      activeYearFilter = null;
+      activeMonthFilter = null;
+      activePostIdFilter = null;
+      activeSectionFilter = null;
+
+      if (parts[1] === 'pinned') {
+        activeSectionFilter = 'pinned';
+        if (container.dataset.value) {
+          activePostIdFilter = container.dataset.value;
+        }
+      } else if (parts[1] === 'recent') {
+        activeSectionFilter = 'recent';
+        if (container.dataset.value) {
+          activePostIdFilter = container.dataset.value;
+        }
+      } else if (parts[1] === 'years') {
+        activeSectionFilter = 'years';
+        if (parts[2]) {
+          activeYearFilter = parts[2];
+        }
+        if (parts[3]) {
+          const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+          const monthIdx = MONTH_NAMES.indexOf(parts[3]);
+          if (monthIdx !== -1) {
+            activeMonthFilter = String(monthIdx + 1).padStart(2, '0');
+          }
+        }
+      }
+      
+      renderFilteredPosts();
+    }
+
+    function getAllNormalPosts() {
+      const list = [];
+      if (BLOG_DATA.posts) {
+        for (const year in BLOG_DATA.posts) {
+          if (year === 'pinned') continue;
+          const yearData = BLOG_DATA.posts[year];
+          if (yearData && typeof yearData === 'object') {
+            for (const month in yearData) {
+              const monthData = yearData[month];
+              if (Array.isArray(monthData)) {
+                list.push(...monthData);
+              }
+            }
+          }
+        }
+      }
+      list.sort((a, b) => b.date.localeCompare(a.date));
+      return list;
+    }
+
+    function renderFilteredPosts() {
+      let postsList = [];
+
+      // 1. Gather posts based on active filters
+      if (activePostIdFilter) {
+        const post = findPostById(activePostIdFilter);
+        if (post) {
+          postsList.push(post);
+        }
+      } else if (activeSectionFilter === 'pinned') {
+        if (Array.isArray(BLOG_DATA.posts.pinned)) {
+          postsList.push(...BLOG_DATA.posts.pinned);
+        }
+      } else if (activeSectionFilter === 'recent') {
+        postsList.push(...getAllNormalPosts().slice(0, 10));
+      } else if (activeSectionFilter === 'years') {
+        if (activeYearFilter) {
+          const yearData = BLOG_DATA.posts[activeYearFilter];
+          if (yearData) {
+            if (activeMonthFilter) {
+              const monthData = yearData[activeMonthFilter];
+              if (Array.isArray(monthData)) {
+                postsList.push(...monthData);
+              }
+            } else {
+              const temp = [];
+              for (const month in yearData) {
+                const monthData = yearData[month];
+                if (Array.isArray(monthData)) {
+                  temp.push(...monthData);
+                }
+              }
+              temp.sort((a, b) => b.date.localeCompare(a.date));
+              postsList.push(...temp);
+            }
+          }
+        } else {
+          postsList.push(...getAllNormalPosts());
+        }
+      } else {
+        // Default landing state: pinned first, then normal posts
+        if (Array.isArray(BLOG_DATA.posts.pinned)) {
+          postsList.push(...BLOG_DATA.posts.pinned);
+        }
+        postsList.push(...getAllNormalPosts());
+      }
+
+      // 2. Apply tag filter
+      if (activeTagFilter) {
+        postsList = postsList.filter(p => p.tags && p.tags.includes(activeTagFilter));
+      }
+
+      // 3. Map to simplified post representation (metadata except content)
+      const simplifiedPosts = postsList.map(p => ({
+        title: p.title,
+        date: p.date,
+        author: p.author,
+        tags: p.tags,
+        summary: p.summary,
+        id: p.id
+      }));
+
+      // 4. Render as JSON array of objects
+      postsRoot.innerHTML = '';
+      const treeDOM = createJSONDOM("posts", simplifiedPosts, true, 0, "root");
+      postsRoot.appendChild(treeDOM);
+      
+      const allContainers = postsRoot.querySelectorAll('.json-container');
+      allContainers.forEach(container => {
+        if (container.dataset.postId) {
+          container.classList.add('collapsed');
+          updateAriaExpanded(container);
+        }
+      });
+
+      invalidateVisibleLines('posts');
+      panels.posts.selectedIndex = 0;
+      updateSelection(0, 'posts');
+    }
+
+    function applyTagFilter(tag) {
+      activeTagFilter = tag;
+      renderFilteredPosts();
+    }
+
+    function clearTagFilter() {
+      activeTagFilter = null;
+      renderFilteredPosts();
+    }
+
+    // Synchronization logic for reader pane
+    function syncReaderView(selectedLine) {
+      const postContainer = selectedLine.closest('[data-post-id]');
+      if (postContainer) {
+        const postId = postContainer.getAttribute('data-post-id');
+        if (postId !== currentPostId) {
+          currentPostId = postId;
+          renderPost(postId);
+        }
+      } else {
+        currentPostId = null;
+        renderDefaultReader();
+      }
+
+      const visibleLines = getVisibleLines('posts');
+      const postsIndex = panels.posts.selectedIndex;
+      statusLineInfo.textContent = `Line ${postsIndex + 1}/${visibleLines.length}`;
+
+      if (!document.body.classList.contains('reader-active')) {
+        restoreNormalStatusMode();
+      }
+    }
+
+    function openReaderView() {
+      const visibleLines = getVisibleLines('posts');
+      const currentLine = visibleLines[panels.posts.selectedIndex];
+      if (!currentLine) return;
+      
+      const postContainer = currentLine.closest('[data-post-id]');
+      if (postContainer) {
+        const postId = postContainer.getAttribute('data-post-id');
+        document.body.classList.add('reader-active');
+        window.location.hash = '#' + postId;
+        
+        // Update status bar mode to PAGER
+        document.querySelector('.status-left').innerHTML = `
+          <span class="app-logo" style="margin-right: 16px;">jless-blog<span>.json</span></span>
+          <span>MODE: PAGER</span>
+          <span style="color: #abb2bf; font-weight: normal; margin-left: 16px;">[[ / ]] Prev/Next</span>
+          <span style="color: #98c379; font-weight: bold; margin-left: 16px;">[q / Esc] Close Article</span>
+        `;
+      }
+    }
+
+    function closeReaderView() {
+      document.body.classList.remove('reader-active');
+      window.location.hash = '';
+      
+      restoreNormalStatusMode();
+      
+      const visibleLines = getVisibleLines(activePanelId);
+      const panel = panels[activePanelId];
+      if (visibleLines[panel.selectedIndex]) {
+        visibleLines[panel.selectedIndex].focus();
+      }
+    }
+
+    function navigateArticles(direction) {
+      if (!currentPostId) return;
+      
+      const posts = Array.from(document.querySelectorAll('#posts-root [data-post-id]')).filter(el => !el.classList.contains('filtered-out'));
+      if (posts.length === 0) return;
+      
+      const idx = posts.findIndex(el => el.getAttribute('data-post-id') === currentPostId);
+      if (idx === -1) return;
+      
+      const targetIdx = idx + direction;
+      if (targetIdx >= 0 && targetIdx < posts.length) {
+        const targetPost = posts[targetIdx];
+        const targetId = targetPost.getAttribute('data-post-id');
+        
+        let parent = targetPost.parentElement;
+        while (parent && parent !== postsRoot) {
+          if (parent.classList.contains('json-container')) {
+            parent.classList.remove('collapsed');
+            updateAriaExpanded(parent);
+          }
+          parent = parent.parentElement;
+        }
+        invalidateVisibleLines('posts');
+        
+        const openingLine = targetPost.querySelector(':scope > .json-opening');
+        if (openingLine) {
+          const visibleLines = getVisibleLines('posts');
+          const lineIdx = visibleLines.indexOf(openingLine);
+          if (lineIdx !== -1) {
+            updateSelection(lineIdx, 'posts');
+            window.location.hash = '#' + targetId;
+          }
+        }
+      }
+    }
+
+    function handleHashRouting() {
+      const hash = window.location.hash.replace('#', '');
+      if (!hash) {
+        if (document.body.classList.contains('reader-active')) {
+          closeReaderView();
+        }
+        return;
+      }
+      
+      const postContainer = document.querySelector(`[data-post-id="${hash}"]`);
+      if (postContainer) {
+        let parent = postContainer.parentElement;
+        while (parent && parent !== postsRoot) {
+          if (parent.classList.contains('json-container')) {
+            parent.classList.remove('collapsed');
+            updateAriaExpanded(parent);
+          }
+          parent = parent.parentElement;
+        }
+        invalidateVisibleLines('posts');
+        
+        const openingLine = postContainer.querySelector(':scope > .json-opening');
+        if (openingLine) {
+          const visibleLines = getVisibleLines('posts');
+          const idx = visibleLines.indexOf(openingLine);
+          if (idx !== -1) {
+            switchPanel('posts');
+            updateSelection(idx, 'posts');
+            if (!document.body.classList.contains('reader-active')) {
+              openReaderView();
+            }
+          }
+        }
+      }
+    }
+
+    function restoreNormalStatusMode() {
+      const visibleLines = getVisibleLines(activePanelId);
+      const selIdx = panels[activePanelId] ? panels[activePanelId].selectedIndex : 0;
+      const currentLine = visibleLines[selIdx];
+      const postContainer = currentLine ? currentLine.closest('[data-post-id]') : null;
+      
+      let promptHTML = '';
+      if (activePanelId === 'posts' && postContainer) {
+        promptHTML = `<span id="read-prompt-indicator" style="color: #98c379; font-weight: bold; margin-left: 16px;">[Enter] Read Article</span>`;
+      } else {
+        promptHTML = `<span style="color: #abb2bf; margin-left: 16px;">[j/k] Navigate | [Tab] Switch Pane</span>`;
+      }
+      
+      document.querySelector('.status-left').innerHTML = `
+        <span class="app-logo" style="margin-right: 16px;">jless-blog<span>.json</span></span>
+        <span>MODE: NORMAL</span>
+        <span style="color: #61afef; font-weight: bold; margin-left: 16px;">PANE: ${activePanelId.toUpperCase()}</span>
+        <span id="search-status-indicator" style="display: ${matchedLines.length > 0 ? 'inline' : 'none'}; color: #e5c07b; margin-left: 8px;">SEARCH ACTIVE</span>
+        <span id="filter-status-indicator" style="display: ${activeTagFilter ? 'inline' : 'none'}; color: #98c379; font-weight: bold; margin-left: 8px;">FILTER: ${activeTagFilter}</span>
+        ${promptHTML}
+      `;
+    }
+
+    function updateKeyBufferDisplay() {
+      const bufferSpan = document.getElementById('key-buffer-display');
+      if (bufferSpan) {
+        bufferSpan.textContent = lastKeyPressed || '';
+      }
+    }
+
+    function renderPost(postId) {
+      const post = findPostById(postId);
+      if (!post) {
+        renderDefaultReader();
+        return;
+      }
+
+      readerHeaderTitle.textContent = `Reader: ${post.title}`;
+
+      const tagsHTML = post.tags.map(t => `<span class="reader-tag">${t}</span>`).join(' ');
+
+      readerContent.innerHTML = `
+        <article class="reader-post">
+          <h1>${post.title}</h1>
+          <div class="reader-meta">
+            <span><span class="reader-meta-label">Author:</span> ${post.author}</span>
+            <span><span class="reader-meta-label">Date:</span> ${post.date}</span>
+            <span><span class="reader-meta-label">Tags:</span> ${tagsHTML}</span>
+          </div>
+          <div class="reader-body">
+            ${parseMarkdown(post.content)}
+          </div>
+        </article>
+      `;
+      // Scroll reader view back to top on switch
+      readerContent.scrollTop = 0;
+    }
+
+    function renderDefaultReader() {
+      readerHeaderTitle.textContent = `Reader: No post selected`;
+      readerContent.innerHTML = `
+        <div class="reader-empty">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+          </svg>
+          <h2>jless-blog reader</h2>
+          <p>Navigate the JSON database in the left pane. Select any key inside a post object or press Enter to read the post content here.</p>
+        </div>
+      `;
+    }
+
+    // Markdown Parser
+    function parseMarkdown(text) {
+      if (!text) return "";
+      let html = text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+      // Code blocks
+      html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
+        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+      });
+
+      // Inline code
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+      // Headings
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+
+      // Bold / Italic
+      html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #61afef; text-decoration: none;">$1</a>');
+
+      // Lists
+      let lines = html.split('\n');
+      let inList = false;
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim().startsWith('- ')) {
+          let content = lines[i].trim().substring(2);
+          if (!inList) {
+            lines[i] = '<ul>\n<li>' + content + '</li>';
+            inList = true;
+          } else {
+            lines[i] = '<li>' + content + '</li>';
+          }
+        } else {
+          if (inList) {
+            lines[i] = '</ul>\n' + lines[i];
+            inList = false;
+          }
+        }
+      }
+      if (inList) {
+        lines.push('</ul>');
+      }
+      html = lines.join('\n');
+
+      // Paragraph splits
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = '<p>' + html + '</p>';
+      html = html.replace(/<p>\s*<\/p>/g, '');
+
+      return html;
+    }
+
+    // Search Engine Mode
+    function openSearchInput() {
+      isSearchMode = true;
+      searchConsole.style.display = 'flex';
+      searchIndicator.style.display = 'inline';
+      searchQueryField.focus();
+      searchQueryField.value = '';
+      searchCount.textContent = '';
+      matchedLines = [];
+      matchedIndex = -1;
+    }
+
+    function closeSearchInput(keepHighlights = false) {
+      isSearchMode = false;
+      searchConsole.style.display = 'none';
+      if (!keepHighlights) {
+        clearSearch();
+      }
+      const visibleLines = getVisibleLines(activePanelId);
+      const panel = panels[activePanelId];
+      if (visibleLines[panel.selectedIndex]) {
+        visibleLines[panel.selectedIndex].focus();
+      }
+    }
+
+    function clearSearch() {
+      document.querySelectorAll('.json-line.search-match').forEach(el => {
+        el.classList.remove('search-match');
+      });
+      matchedLines = [];
+      matchedIndex = -1;
+      searchIndicator.style.display = 'none';
+    }
+
+    function executeSearch(query) {
+      clearSearch();
+      
+      const q = query.toLowerCase().trim();
+      if (q.length < 2) {
+        searchCount.textContent = '';
+        return;
+      }
+
+      const visibleLines = getVisibleLines();
+      matchedLines = visibleLines.filter(line => {
+        return line.textContent.toLowerCase().includes(q);
+      });
+
+      matchedLines.forEach(line => {
+        line.classList.add('search-match');
+      });
+
+      searchCount.textContent = `${matchedLines.length} match${matchedLines.length === 1 ? '' : 'es'}`;
+      
+      if (matchedLines.length > 0) {
+        searchIndicator.style.display = 'inline';
+      }
+    }
+
+    function confirmSearch() {
+      if (matchedLines.length > 0) {
+        matchedIndex = 0;
+        const visibleLines = getVisibleLines();
+        const targetIdx = visibleLines.indexOf(matchedLines[0]);
+        if (targetIdx !== -1) {
+          updateSelection(targetIdx);
+        }
+      }
+      closeSearchInput(true);
+    }
+
+    function navigateSearchMatch(direction) {
+      if (matchedLines.length === 0) return;
+
+      if (direction === 1) {
+        matchedIndex = (matchedIndex + 1) % matchedLines.length;
+      } else {
+        matchedIndex = (matchedIndex - 1 + matchedLines.length) % matchedLines.length;
+      }
+
+      const targetLine = matchedLines[matchedIndex];
+      const visibleLines = getVisibleLines();
+      const targetIdx = visibleLines.indexOf(targetLine);
+      
+      if (targetIdx !== -1) {
+        updateSelection(targetIdx);
+      }
+    }
+
+    // Help Panel Controls
+    function toggleHelp(show) {
+      isHelpMode = show;
+      helpMenu.style.display = show ? 'flex' : 'none';
+      if (show) {
+        lastActiveElementBeforeHelp = document.activeElement;
+        helpMenu.setAttribute('aria-hidden', 'false');
+        const closeBtn = document.getElementById('help-close-btn');
+        if (closeBtn) {
+          closeBtn.focus();
+        }
+      } else {
+        helpMenu.setAttribute('aria-hidden', 'true');
+        if (lastActiveElementBeforeHelp && typeof lastActiveElementBeforeHelp.focus === 'function') {
+          lastActiveElementBeforeHelp.focus();
+        } else {
+          const visibleLines = getVisibleLines(activePanelId);
+          const panel = panels[activePanelId];
+          if (visibleLines[panel.selectedIndex]) {
+            visibleLines[panel.selectedIndex].focus();
+          }
+        }
+      }
+    }
+
+    function trapHelpFocus(event) {
+      const focusableElements = helpMenu.querySelectorAll('button, [tabindex="0"]');
+      if (focusableElements.length === 0) return;
+      const first = focusableElements[0];
+      const last = focusableElements[focusableElements.length - 1];
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          last.focus();
+          event.preventDefault();
+        }
+      } else {
+        if (document.activeElement === last) {
+          first.focus();
+          event.preventDefault();
+        }
+      }
+    }
+
+    // Main Keyboard Key Router
+    function handleKey(key) {
+      const panel = panels[activePanelId];
+      if (key === 'j' || key === 'ArrowDown') {
+        updateSelection(panel.selectedIndex + 1, activePanelId);
+      } else if (key === 'k' || key === 'ArrowUp') {
+        updateSelection(panel.selectedIndex - 1, activePanelId);
+      } else if (key === 'J') {
+        handleSiblingNavigation(1);
+      } else if (key === 'K') {
+        handleSiblingNavigation(-1);
+      } else if (key === 'h' || key === 'ArrowLeft') {
+        handleCollapseKey();
+      } else if (key === 'l' || key === 'ArrowRight') {
+        handleExpandKey();
+      } else if (key === 'Enter' || key === ' ') {
+        const visibleLines = getVisibleLines(activePanelId);
+        const currentLine = visibleLines[panel.selectedIndex];
+        if (currentLine && currentLine.classList.contains('json-opening')) {
+          const container = currentLine.closest('.json-container');
+          if (container) {
+            container.classList.toggle('collapsed');
+            updateSelection(panel.selectedIndex, activePanelId);
+          }
+        }
+      } else if (key === 'g') {
+        if (lastKeyPressed === 'g') {
+          updateSelection(0, activePanelId);
+          lastKeyPressed = '';
+          updateKeyBufferDisplay();
+        } else {
+          lastKeyPressed = 'g';
+          updateKeyBufferDisplay();
+          setTimeout(() => {
+            if (lastKeyPressed === 'g') {
+              lastKeyPressed = '';
+              updateKeyBufferDisplay();
+            }
+          }, 500);
+        }
+      } else if (key === 'G') {
+        const visibleLines = getVisibleLines(activePanelId);
+        updateSelection(visibleLines.length - 1, activePanelId);
+      } else if (key === 'w') {
+        handleDepthJump(1);
+      } else if (key === 'b') {
+        handleDepthJump(-1);
+      } else if (key === 'c') {
+        handleCollapseSiblings();
+      } else if (key === 'f') {
+        const visibleLines = getVisibleLines(activePanelId);
+        const currentLine = visibleLines[panel.selectedIndex];
+        if (currentLine) {
+          const stringValEl = currentLine.querySelector('.json-value.json-string');
+          if (stringValEl) {
+            const tagValue = stringValEl.textContent.replace(/"/g, '');
+            applyTagFilter(tagValue);
+          }
+        }
+      } else if (key === '/') {
+        openSearchInput();
+      } else if (key === 'n') {
+        navigateSearchMatch(1);
+      } else if (key === 'N') {
+        navigateSearchMatch(-1);
+      } else if (key === '?') {
+        toggleHelp(true);
+      } else if (key === 'Escape') {
+        if (activeTagFilter) {
+          clearTagFilter();
+        } else {
+          clearSearch();
+        }
+      } else if (key === 'o') {
+        const visibleLines = getVisibleLines(activePanelId);
+        const currentLine = visibleLines[panel.selectedIndex];
+        if (currentLine && currentLine.closest('[data-post-id]')) {
+          openReaderView();
+        }
+      }
+    }
+
+    // Keyboard Listeners
+    window.addEventListener('keydown', (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (isHelpMode) {
+        if (['Escape', 'q', 'Enter', ' '].includes(event.key)) {
+          toggleHelp(false);
+          event.preventDefault();
+        } else if (event.key === 'Tab') {
+          trapHelpFocus(event);
+        }
+        return;
+      }
+
+      const activeEl = document.activeElement;
+      if (activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.hasAttribute('contenteditable') || 
+        activeEl.isContentEditable
+      )) {
+        if (event.key === 'Escape') {
+          closeSearchInput(false);
+          event.preventDefault();
+        } else if (event.key === 'Enter') {
+          confirmSearch();
+          event.preventDefault();
+        }
+        return;
+      }
+
+      // Pane focus cycle via Tab / Shift+Tab
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        const paneOrder = ['dates', 'posts', 'metadata'];
+        let idx = paneOrder.indexOf(activePanelId);
+        if (event.shiftKey) {
+          idx = (idx - 1 + paneOrder.length) % paneOrder.length;
+        } else {
+          idx = (idx + 1) % paneOrder.length;
+        }
+        switchPanel(paneOrder[idx]);
+        return;
+      }
+
+      if (document.body.classList.contains('reader-active')) {
+        if (event.key === 'j' || event.key === 'ArrowDown') {
+          readerContent.scrollTop += 40;
+          event.preventDefault();
+        } else if (event.key === 'k' || event.key === 'ArrowUp') {
+          readerContent.scrollTop -= 40;
+          event.preventDefault();
+        } else if (event.key === ' ' || event.key === 'PageDown') {
+          readerContent.scrollTop += readerContent.clientHeight - 40;
+          event.preventDefault();
+        } else if (event.key === 'PageUp') {
+          readerContent.scrollTop -= readerContent.clientHeight - 40;
+          event.preventDefault();
+        } else if (event.key === 'q' || event.key === 'Escape') {
+          closeReaderView();
+          event.preventDefault();
+        } else if (event.key === '[' || event.key === ']') {
+          navigateArticles(event.key === '[' ? -1 : 1);
+          event.preventDefault();
+        }
+        return;
+      }
+
+      if (['j', 'k', 'ArrowUp', 'ArrowDown', ' ', 'h', 'l', 'ArrowLeft', 'ArrowRight'].includes(event.key)) {
+        event.preventDefault();
+      }
+
+      if (event.key === 'Enter') {
+        const visibleLines = getVisibleLines(activePanelId);
+        const panel = panels[activePanelId];
+        const currentLine = visibleLines[panel.selectedIndex];
+        if (activePanelId === 'posts' && currentLine && currentLine.closest('[data-post-id]')) {
+          openReaderView();
+          event.preventDefault();
+          return;
+        }
+      }
+
+      handleKey(event.key);
+    });
+
+    // Search Input Listener
+    searchQueryField.addEventListener('input', (e) => {
+      executeSearch(e.target.value);
+    });
+
+    // Mouse Interaction Handlers
+    document.querySelector('.app-body').addEventListener('click', (event) => {
+      const pane = event.target.closest('.pane');
+      if (pane && (pane.id === 'dates-pane' || pane.id === 'posts-pane' || pane.id === 'metadata-pane')) {
+        const panelId = pane.id.replace('-pane', '');
+        if (panelId !== activePanelId) {
+          switchPanel(panelId);
+        }
+      }
+
+      const toggle = event.target.closest('.toggle-icon');
+      if (toggle) {
+        const line = toggle.closest('.json-line');
+        if (line && line.classList.contains('json-opening')) {
+          const container = line.closest('.json-container');
+          if (container) {
+            container.classList.toggle('collapsed');
+            updateAriaExpanded(container);
+            invalidateVisibleLines(activePanelId);
+            
+            const visibleLines = getVisibleLines(activePanelId);
+            const clickedIdx = visibleLines.indexOf(line);
+            if (clickedIdx !== -1) {
+              updateSelection(clickedIdx, activePanelId);
+            }
+          }
+        }
+        event.stopPropagation();
+        return;
+      }
+
+      const line = event.target.closest('.json-line');
+      if (line) {
+        const visibleLines = getVisibleLines(activePanelId);
+        const clickedIdx = visibleLines.indexOf(line);
+        if (clickedIdx !== -1) {
+          updateSelection(clickedIdx, activePanelId);
+        }
+      }
+    });
+
+    // Close help modal on click background or close button
+    helpMenu.addEventListener('click', (e) => {
+      if (e.target === helpMenu || e.target.closest('#help-close-btn')) {
+        toggleHelp(false);
+      }
+    });
+
+    // Generate ~75 realistic test articles across the past 10 years
+    function generateRandomArticles() {
+      // Deterministic PRNG with fixed seed to ensure consistent data across page refreshes
+      let seed = 12345;
+      function seedRandom() {
+        const x = Math.sin(seed++) * 10000;
+        return x - Math.floor(x);
+      }
+
+      const titles = [
+        "Exploring the Limits of {tech}",
+        "A Deep Dive into {topic}",
+        "Why {tech} is the Future of {field}",
+        "The Mathematics of {topic}",
+        "Hacking {tech} for Fun and Profit",
+        "Understanding {topic} in Modern Systems",
+        "Symmetry and {topic} in Theory",
+        "Building a {tech} Engine from Scratch",
+        "The Hidden Geometry of {topic}",
+        "Optimizing {tech} Compiler Performance"
+      ];
+      
+      const techs = ["JavaScript", "Rust", "WebAssembly", "C++", "Python", "Linux Kernel", "Docker", "Git", "CSS", "SQL"];
+      const topics = ["Noetherian Rings", "Cons Cells", "Lagrangian Mechanics", "Focus Traps", "Quantum Symmetries", "Category Theory", "Neural Networks", "Lisp Interpreters", "Parser Generators", "Distributed Consensus"];
+      const fields = ["Systems Programming", "Theoretical Physics", "Web Architecture", "Functional Programming", "Compiler Design", "Cryptography"];
+      
+      const paragraphs = [
+        "In this article, we examine the core principles of {topic} and how they apply to modern systems. Many developers overlook the mathematical foundations, which leads to suboptimal designs.",
+        "Using {tech} allows us to bypass standard limitations. By writing custom memory managers or optimizing compilation paths, we can achieve significant speedups in execution speed.",
+        "Historically, {field} was dominated by heavy graphical user interfaces. Today, the shift towards keyboard-driven terminal aesthetics has changed how we parse and interact with structured information.",
+        "We can represent the underlying structures as a directed acyclic graph. Traversing this hierarchy structurally using algorithms derived from category theory yields modular implementations.",
+        "In conclusion, the intersection of {tech} and {topic} offers fertile ground for research. Future investigations will focus on reducing latency and improving developer ergonomics."
+      ];
+
+      const tags = ["hacker", "vim", "physics", "math", "compiler", "systems", "web", "ux", "javascript", "rust", "lisp", "mechanics"];
+
+      const posts = {};
+      const pinned = [...(BLOG_DATA.posts.pinned || [])];
+      
+      // Past 10 years (June 2016 to June 2026)
+      const startDate = new Date(2016, 5, 8).getTime();
+      const endDate = new Date(2026, 5, 8).getTime();
+      
+      for (let i = 0; i < 75; i++) {
+        const randomTime = startDate + seedRandom() * (endDate - startDate);
+        const dateObj = new Date(randomTime);
+        const year = String(dateObj.getFullYear());
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+        
+        const tech = techs[Math.floor(seedRandom() * techs.length)];
+        const topic = topics[Math.floor(seedRandom() * topics.length)];
+        const field = fields[Math.floor(seedRandom() * fields.length)];
+        
+        let title = titles[Math.floor(seedRandom() * titles.length)];
+        title = title.replace('{tech}', tech).replace('{topic}', topic).replace('{field}', field);
+        
+        let contentParts = [
+          `# ${title}\n`,
+          `*Generated test article in the database for date ${dateStr}.*\n`
+        ];
+        
+        for (let p = 0; p < 3; p++) {
+          let para = paragraphs[Math.floor(seedRandom() * paragraphs.length)];
+          para = para.replace('{tech}', tech).replace('{topic}', topic).replace('{field}', field);
+          contentParts.push(para + "\n");
+        }
+        const content = contentParts.join('\n');
+        
+        const numTags = 2 + Math.floor(seedRandom() * 3);
+        const shuffledTags = [...tags].sort(() => 0.5 - seedRandom());
+        const postTags = shuffledTags.slice(0, numTags);
+        
+        const post = {
+          id: `generated-post-${i}`,
+          title: title,
+          date: dateStr,
+          author: "generated_bot",
+          tags: postTags,
+          summary: `A generated test article discussing ${tech} and ${topic} in the field of ${field}.`,
+          content: content
+        };
+        
+        if (!posts[year]) {
+          posts[year] = {};
+        }
+        if (!posts[year][month]) {
+          posts[year][month] = [];
+        }
+        posts[year][month].push(post);
+      }
+      
+      // Sort within month arrays
+      for (const y in posts) {
+        for (const m in posts[y]) {
+          posts[y][m].sort((a, b) => b.date.localeCompare(a.date));
+        }
+      }
+      
+      // Merge with existing 2026-06 posts (Emmy Noether, Keyboard JS)
+      if (BLOG_DATA.posts && BLOG_DATA.posts["2026"] && BLOG_DATA.posts["2026"]["06"]) {
+        if (!posts["2026"]) posts["2026"] = {};
+        if (!posts["2026"]["06"]) posts["2026"]["06"] = [];
+        posts["2026"]["06"].push(...BLOG_DATA.posts["2026"]["06"]);
+        posts["2026"]["06"].sort((a, b) => b.date.localeCompare(a.date));
+      }
+      
+      BLOG_DATA.posts = {
+        ...posts,
+        pinned: pinned
+      };
+    }
+
+    // Initialize Application
+    function init() {
+      // Generate test database posts
+      generateRandomArticles();
+
+      // Extract Dates data
+      const datesData = extractDates();
+      
+      // Extract Metadata data
+      const metadataData = {
+        "name": BLOG_DATA.name,
+        "version": BLOG_DATA.version,
+        "description": BLOG_DATA.description,
+        "author": BLOG_DATA.author
+      };
+
+      // Build DOM representation for Dates
+      const datesTreeDOM = createJSONDOM("dates", datesData, true, 0, "root", true);
+      datesRoot.appendChild(datesTreeDOM);
+
+      // Build DOM representation for Metadata
+      const metadataTreeDOM = createJSONDOM("metadata", metadataData, true, 0, "root");
+      metadataRoot.appendChild(metadataTreeDOM);
+
+      // Build DOM representation for Posts (initial render)
+      renderFilteredPosts();
+
+      // Collapse years in dates root under the years namespace
+      const datesContainers = datesRoot.querySelectorAll('.json-container');
+      datesContainers.forEach(container => {
+        const path = container.dataset.path;
+        if (path && /^root\.years\.\d{4}$/.test(path)) {
+          container.classList.add('collapsed');
+          updateAriaExpanded(container);
+        }
+      });
+      invalidateVisibleLines('dates');
+      invalidateVisibleLines('metadata');
+
+      // Set initial focus to Posts pane
+      switchPanel('posts');
+
+      // Handle initial hash routing
+      handleHashRouting();
+    }
+
+    init();
+
+    window.addEventListener('hashchange', handleHashRouting);
+  </script>
+</body>
+</html>
