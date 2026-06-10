@@ -296,10 +296,6 @@
       box-shadow: inset 0 -1px 0 #e5c07b, inset 3px 0 0 #61afef;
     }
 
-    .json-container.filtered-out {
-      display: none !important;
-    }
-
     /* Reader Pane Styling */
     .reader-post {
       max-width: 680px;
@@ -878,6 +874,27 @@
       }
     }
 
+    // Expand collapsed ancestors so the given line becomes navigable. The
+    // line's own container is left collapsed when the line is its opening
+    // brace (selecting it does not require expanding it). Returns whether
+    // anything changed so callers know to invalidate cached visible lines.
+    function revealLine(line, rootEl) {
+      const ownContainer = line.closest('.json-container');
+      let node = line.parentElement;
+      let changed = false;
+      while (node && node !== rootEl) {
+        if (node.classList.contains('json-container') && node.classList.contains('collapsed')) {
+          if (!(node === ownContainer && line.classList.contains('json-opening'))) {
+            node.classList.remove('collapsed');
+            updateAriaExpanded(node);
+            changed = true;
+          }
+        }
+        node = node.parentElement;
+      }
+      return changed;
+    }
+
     // DOM Elements Cache
     const datesRoot = document.getElementById('dates-root');
     const metadataRoot = document.getElementById('metadata-root');
@@ -885,7 +902,6 @@
     const searchConsole = document.getElementById('search-console');
     const searchQueryField = document.getElementById('search-query-field');
     const searchCount = document.getElementById('search-count');
-    const searchIndicator = document.getElementById('search-status-indicator');
     const helpMenu = document.getElementById('help-menu');
     const readerContent = document.getElementById('reader-content');
     const readerHeaderTitle = document.getElementById('reader-header-title');
@@ -951,9 +967,9 @@
           const displayTitle = value.title || value.name;
           const keyName = value.title ? 'title' : 'name';
           if (stripQuotes) {
-            ellipsisSpan.innerHTML = ` <span class="json-key">${keyName}</span>: <span class="json-value json-string">${displayTitle}</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
+            ellipsisSpan.innerHTML = ` <span class="json-key">${keyName}</span>: <span class="json-value json-string">${escapeHTML(displayTitle)}</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
           } else {
-            ellipsisSpan.innerHTML = ` <span class="json-key">"${keyName}"</span>: <span class="json-value json-string">"${displayTitle}"</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
+            ellipsisSpan.innerHTML = ` <span class="json-key">"${keyName}"</span>: <span class="json-value json-string">"${escapeHTML(displayTitle)}"</span>, <span class="ellipsis-badge">...</span> }${isLast ? '' : ','}`;
           }
         } else {
           const bracketClose = isObject ? '}' : ']';
@@ -1123,6 +1139,25 @@
       return container;
     }
 
+    // A line is navigable unless its own container (for closing braces) or any
+    // ancestor container is collapsed. Structural check instead of offsetParent:
+    // stays correct even while the whole pane is display:none (reader mode).
+    function isLineNavigable(line) {
+      if (line.classList.contains('json-closing')) {
+        const own = line.closest('.json-container');
+        if (own && own.classList.contains('collapsed')) return false;
+      }
+      let node = line.parentElement;
+      while (node) {
+        if (node.classList.contains('json-children') &&
+            node.parentElement.classList.contains('collapsed')) {
+          return false;
+        }
+        node = node.parentElement;
+      }
+      return true;
+    }
+
     // Retrieve active visible lines
     function getVisibleLines(panelId = activePanelId) {
       const panel = panels[panelId];
@@ -1131,7 +1166,7 @@
         const root = document.getElementById(panel.rootId);
         if (!root) return [];
         panel.cachedVisibleLines = Array.from(root.querySelectorAll('.json-line'))
-                                      .filter(el => el.offsetParent !== null);
+                                      .filter(isLineNavigable);
       }
       return panel.cachedVisibleLines;
     }
@@ -1278,12 +1313,15 @@
         return;
       }
 
-      // Case 2: Already collapsed or on leaf -> jump to parent container opening node
-      const parentContainer = currentLine.parentElement.closest('.json-container');
-      if (parentContainer) {
-        const parentOpening = parentContainer.querySelector(':scope > .json-opening');
-        if (parentOpening && parentOpening !== currentLine) {
-          const idx = visibleLines.indexOf(parentOpening);
+      // Case 2: closing brace -> jump to its own opening brace; leaf or
+      // already-collapsed node -> jump to the parent container's opening brace
+      const targetContainer = currentLine.classList.contains('json-closing')
+        ? container
+        : (container ? container.parentElement.closest('.json-container') : null);
+      if (targetContainer) {
+        const targetOpening = targetContainer.querySelector(':scope > .json-opening');
+        if (targetOpening && targetOpening !== currentLine) {
+          const idx = visibleLines.indexOf(targetOpening);
           if (idx !== -1) {
             updateSelection(idx, activePanelId);
           }
@@ -1673,29 +1711,22 @@
     function navigateArticles(direction) {
       if (!currentPostId) return;
       
-      const posts = Array.from(document.querySelectorAll('#posts-root [data-post-id]')).filter(el => !el.classList.contains('filtered-out'));
+      const posts = Array.from(document.querySelectorAll('#posts-root [data-post-id]'));
       if (posts.length === 0) return;
-      
+
       const idx = posts.findIndex(el => el.getAttribute('data-post-id') === currentPostId);
       if (idx === -1) return;
-      
+
       const targetIdx = idx + direction;
       if (targetIdx >= 0 && targetIdx < posts.length) {
         const targetPost = posts[targetIdx];
         const targetId = targetPost.getAttribute('data-post-id');
-        
-        let parent = targetPost.parentElement;
-        while (parent && parent !== postsRoot) {
-          if (parent.classList.contains('json-container')) {
-            parent.classList.remove('collapsed');
-            updateAriaExpanded(parent);
-          }
-          parent = parent.parentElement;
-        }
-        invalidateVisibleLines('posts');
-        
+
         const openingLine = targetPost.querySelector(':scope > .json-opening');
         if (openingLine) {
+          if (revealLine(openingLine, postsRoot)) {
+            invalidateVisibleLines('posts');
+          }
           const visibleLines = getVisibleLines('posts');
           const lineIdx = visibleLines.indexOf(openingLine);
           if (lineIdx !== -1) {
@@ -1717,24 +1748,21 @@
       
       const postContainer = document.querySelector(`[data-post-id="${hash}"]`);
       if (postContainer) {
-        let parent = postContainer.parentElement;
-        while (parent && parent !== postsRoot) {
-          if (parent.classList.contains('json-container')) {
-            parent.classList.remove('collapsed');
-            updateAriaExpanded(parent);
-          }
-          parent = parent.parentElement;
-        }
-        invalidateVisibleLines('posts');
-        
         const openingLine = postContainer.querySelector(':scope > .json-opening');
         if (openingLine) {
+          if (revealLine(openingLine, postsRoot)) {
+            invalidateVisibleLines('posts');
+          }
           const visibleLines = getVisibleLines('posts');
           const idx = visibleLines.indexOf(openingLine);
           if (idx !== -1) {
-            switchPanel('posts');
-            updateSelection(idx, 'posts');
-            if (!document.body.classList.contains('reader-active')) {
+            if (document.body.classList.contains('reader-active')) {
+              // Already reading ([ / ] or history nav): sync selection only,
+              // switchPanel would clobber the PAGER status bar
+              updateSelection(idx, 'posts');
+            } else {
+              switchPanel('posts');
+              updateSelection(idx, 'posts');
               openReaderView();
             }
           }
@@ -1760,7 +1788,7 @@
         <span>MODE: NORMAL</span>
         <span style="color: #61afef; font-weight: bold; margin-left: 16px;">PANE: ${activePanelId.toUpperCase()}</span>
         <span id="search-status-indicator" style="display: ${matchedLines.length > 0 ? 'inline' : 'none'}; color: #e5c07b; margin-left: 8px;">SEARCH ACTIVE</span>
-        <span id="filter-status-indicator" style="display: ${activeTagFilter ? 'inline' : 'none'}; color: #98c379; font-weight: bold; margin-left: 8px;">FILTER: ${activeTagFilter}</span>
+        <span id="filter-status-indicator" style="display: ${activeTagFilter ? 'inline' : 'none'}; color: #98c379; font-weight: bold; margin-left: 8px;">FILTER: ${activeTagFilter ? escapeHTML(activeTagFilter) : ''}</span>
         ${promptHTML}
       `;
     }
@@ -1781,14 +1809,14 @@
 
       readerHeaderTitle.textContent = `Reader: ${post.title}`;
 
-      const tagsHTML = post.tags.map(t => `<span class="reader-tag">${t}</span>`).join(' ');
+      const tagsHTML = post.tags.map(t => `<span class="reader-tag">${escapeHTML(t)}</span>`).join(' ');
 
       readerContent.innerHTML = `
         <article class="reader-post">
-          <h1>${post.title}</h1>
+          <h1>${escapeHTML(post.title)}</h1>
           <div class="reader-meta">
-            <span><span class="reader-meta-label">Author:</span> ${post.author}</span>
-            <span><span class="reader-meta-label">Date:</span> ${post.date}</span>
+            <span><span class="reader-meta-label">Author:</span> ${escapeHTML(post.author)}</span>
+            <span><span class="reader-meta-label">Date:</span> ${escapeHTML(post.date)}</span>
             <span><span class="reader-meta-label">Tags:</span> ${tagsHTML}</span>
           </div>
           <div class="reader-body">
@@ -1817,6 +1845,16 @@
       `;
     }
 
+    // For data interpolated into innerHTML templates (titles, tags, authors);
+    // leaf rendering already uses textContent and needs no escaping
+    function escapeHTML(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
     // Markdown Parser
     function parseMarkdown(text) {
       if (!text) return "";
@@ -1825,13 +1863,16 @@
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 
-      // Code blocks
+      // Code blocks and inline code are stashed as placeholders so the later
+      // passes (headings, bold, lists, paragraphs) cannot rewrite their contents
+      const codeSnippets = [];
+      const stash = (markup) => `\u0000CODE${codeSnippets.push(markup) - 1}\u0000`;
+
       html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, lang, code) => {
-        return `<pre><code class="language-${lang}">${code.trim()}</code></pre>`;
+        return stash(`<pre><code class="language-${lang}">${code.trim()}</code></pre>`);
       });
 
-      // Inline code
-      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      html = html.replace(/`([^`]+)`/g, (_, code) => stash(`<code>${code}</code>`));
 
       // Headings
       html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
@@ -1844,8 +1885,13 @@
       html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
       html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-      // Links
-      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color: #61afef; text-decoration: none;">$1</a>');
+      // Links: http(s), site-relative, and fragment URLs only (no javascript:)
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, label, url) => {
+        if (!/^(https?:\/\/|\/|#)/i.test(url)) {
+          return match;
+        }
+        return `<a href="${url.replace(/"/g, '&quot;')}" target="_blank" rel="noopener noreferrer" style="color: #61afef; text-decoration: none;">${label}</a>`;
+      });
 
       // Lists
       let lines = html.split('\n');
@@ -1876,14 +1922,26 @@
       html = '<p>' + html + '</p>';
       html = html.replace(/<p>\s*<\/p>/g, '');
 
+      // Restore stashed code
+      html = html.replace(/\u0000CODE(\d+)\u0000/g, (_, i) => codeSnippets[i]);
+
       return html;
     }
 
     // Search Engine Mode
+    // The status bar is rebuilt via innerHTML, so the indicator node must be
+    // looked up live; a cached reference goes stale after the first rebuild
+    function setSearchIndicator(visible) {
+      const el = document.getElementById('search-status-indicator');
+      if (el) {
+        el.style.display = visible ? 'inline' : 'none';
+      }
+    }
+
     function openSearchInput() {
       isSearchMode = true;
       searchConsole.style.display = 'flex';
-      searchIndicator.style.display = 'inline';
+      setSearchIndicator(true);
       searchQueryField.focus();
       searchQueryField.value = '';
       searchCount.textContent = '';
@@ -1910,7 +1968,7 @@
       });
       matchedLines = [];
       matchedIndex = -1;
-      searchIndicator.style.display = 'none';
+      setSearchIndicator(false);
     }
 
     function executeSearch(query) {
@@ -1922,8 +1980,11 @@
         return;
       }
 
-      const visibleLines = getVisibleLines();
-      matchedLines = visibleLines.filter(line => {
+      // Scan every line in the active pane, including ones hidden inside
+      // collapsed nodes; navigation expands ancestors to reveal a match
+      const root = document.getElementById(panels[activePanelId].rootId);
+      const allLines = root ? Array.from(root.querySelectorAll('.json-line')) : [];
+      matchedLines = allLines.filter(line => {
         return line.textContent.toLowerCase().includes(q);
       });
 
@@ -1932,20 +1993,26 @@
       });
 
       searchCount.textContent = `${matchedLines.length} match${matchedLines.length === 1 ? '' : 'es'}`;
-      
-      if (matchedLines.length > 0) {
-        searchIndicator.style.display = 'inline';
+
+      setSearchIndicator(matchedLines.length > 0);
+    }
+
+    function selectSearchMatch(targetLine) {
+      const root = document.getElementById(panels[activePanelId].rootId);
+      if (revealLine(targetLine, root)) {
+        invalidateVisibleLines(activePanelId);
+      }
+      const visibleLines = getVisibleLines();
+      const targetIdx = visibleLines.indexOf(targetLine);
+      if (targetIdx !== -1) {
+        updateSelection(targetIdx);
       }
     }
 
     function confirmSearch() {
       if (matchedLines.length > 0) {
         matchedIndex = 0;
-        const visibleLines = getVisibleLines();
-        const targetIdx = visibleLines.indexOf(matchedLines[0]);
-        if (targetIdx !== -1) {
-          updateSelection(targetIdx);
-        }
+        selectSearchMatch(matchedLines[0]);
       }
       closeSearchInput(true);
     }
@@ -1959,13 +2026,7 @@
         matchedIndex = (matchedIndex - 1 + matchedLines.length) % matchedLines.length;
       }
 
-      const targetLine = matchedLines[matchedIndex];
-      const visibleLines = getVisibleLines();
-      const targetIdx = visibleLines.indexOf(targetLine);
-      
-      if (targetIdx !== -1) {
-        updateSelection(targetIdx);
-      }
+      selectSearchMatch(matchedLines[matchedIndex]);
     }
 
     // Help Panel Controls
@@ -2014,6 +2075,11 @@
     // Main Keyboard Key Router
     function handleKey(key) {
       const panel = panels[activePanelId];
+      // Any non-g key cancels a pending gg chord
+      if (key !== 'g' && lastKeyPressed === 'g') {
+        lastKeyPressed = '';
+        updateKeyBufferDisplay();
+      }
       if (key === 'j' || key === 'ArrowDown') {
         updateSelection(panel.selectedIndex + 1, activePanelId);
       } else if (key === 'k' || key === 'ArrowUp') {
@@ -2334,12 +2400,19 @@
         }
       }
       
-      // Merge with existing 2026-06 posts (Emmy Noether, Keyboard JS)
-      if (BLOG_DATA.posts && BLOG_DATA.posts["2026"] && BLOG_DATA.posts["2026"]["06"]) {
-        if (!posts["2026"]) posts["2026"] = {};
-        if (!posts["2026"]["06"]) posts["2026"]["06"] = [];
-        posts["2026"]["06"].push(...BLOG_DATA.posts["2026"]["06"]);
-        posts["2026"]["06"].sort((a, b) => b.date.localeCompare(a.date));
+      // Merge every authored year/month bucket from the original database
+      for (const year in BLOG_DATA.posts) {
+        if (year === 'pinned') continue;
+        const yearData = BLOG_DATA.posts[year];
+        if (!yearData || typeof yearData !== 'object') continue;
+        for (const month in yearData) {
+          const monthData = yearData[month];
+          if (!Array.isArray(monthData)) continue;
+          if (!posts[year]) posts[year] = {};
+          if (!posts[year][month]) posts[year][month] = [];
+          posts[year][month].push(...monthData);
+          posts[year][month].sort((a, b) => b.date.localeCompare(a.date));
+        }
       }
       
       BLOG_DATA.posts = {
