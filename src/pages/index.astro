@@ -1,0 +1,45 @@
+---
+import { getCollection } from 'astro:content';
+import JlessApp from '../components/JlessApp.svelte';
+import { SITE, buildDatesTree, type PostIndexEntry } from '../lib/site';
+import '../styles/global.css';
+
+const entries = await getCollection('posts');
+const posts: PostIndexEntry[] = entries.map((e) => ({
+  slug: e.id,
+  title: e.data.title,
+  date: e.data.date,
+  author: e.data.author,
+  tags: e.data.tags,
+  summary: e.data.summary,
+  pinned: e.data.pinned
+}));
+
+const datesTree = buildDatesTree(posts);
+const metadata = {
+  name: SITE.name,
+  version: SITE.version,
+  description: SITE.description,
+  author: SITE.author
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={SITE.description} />
+    <title>jless-blog // hacker terminal</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body data-pagefind-ignore>
+    <JlessApp client:load {posts} {datesTree} {metadata} version={SITE.version} />
+  </body>
+</html>

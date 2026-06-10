@@ -1,0 +1,100 @@
+---
+import { getCollection, render } from 'astro:content';
+import { SITE } from '../../lib/site';
+import '../../styles/global.css';
+
+export async function getStaticPaths() {
+  const entries = await getCollection('posts');
+  // Canonical ordering: pinned first, then date descending (matches the index)
+  const ordered = [...entries].sort((a, b) => {
+    if (a.data.pinned !== b.data.pinned) return a.data.pinned ? -1 : 1;
+    return b.data.date.localeCompare(a.data.date);
+  });
+  return ordered.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: {
+      entry,
+      prevSlug: ordered[i - 1]?.id ?? null,
+      nextSlug: ordered[i + 1]?.id ?? null
+    }
+  }));
+}
+
+const { entry, prevSlug, nextSlug } = Astro.props;
+const { Content } = await render(entry);
+const { title, date, author, tags, summary } = entry.data;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={summary} />
+    <title>{title} // jless-blog</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    data-slug={entry.id}
+    data-prev-url={prevSlug ? `/posts/${prevSlug}/` : ''}
+    data-next-url={nextSlug ? `/posts/${nextSlug}/` : ''}
+  >
+    <div class="pager-header">Reader: {title}</div>
+    <main class="pager-main" id="pager-main">
+      <article class="reader-post" data-pagefind-body>
+        <h1>{title}</h1>
+        <div class="reader-meta">
+          <span><span class="reader-meta-label">Author:</span> {author}</span>
+          <span><span class="reader-meta-label">Date:</span> {date}</span>
+          <span
+            ><span class="reader-meta-label">Tags:</span>
+            {tags.map((tag) => <span class="reader-tag">{tag}</span>)}
+          </span>
+        </div>
+        <div class="reader-body">
+          <Content />
+        </div>
+      </article>
+    </main>
+    <footer class="app-footer">
+      <div class="status-left">
+        <span class="app-logo" style="margin-right: 16px;">jless-blog<span>.json</span></span>
+        <span>MODE: PAGER</span>
+        <span class="status-hint">[[ / ]] Prev/Next</span>
+        <span class="status-hint-read">[q / Esc] Close Article</span>
+      </div>
+      <div class="status-right">
+        <span>focused-noether v{SITE.version}</span>
+      </div>
+    </footer>
+
+    <script>
+      const main = document.getElementById('pager-main')!;
+      const { slug, prevUrl, nextUrl } = document.body.dataset;
+
+      // Let the index restore its selection to this post on return
+      if (slug) sessionStorage.setItem('jless:lastPost', slug);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        const k = e.key;
+        let handled = true;
+        if (k === 'j' || k === 'ArrowDown') main.scrollTop += 40;
+        else if (k === 'k' || k === 'ArrowUp') main.scrollTop -= 40;
+        else if (k === ' ' || k === 'PageDown') main.scrollTop += main.clientHeight - 40;
+        else if (k === 'PageUp') main.scrollTop -= main.clientHeight - 40;
+        else if (k === 'q' || k === 'Escape') window.location.href = '/';
+        else if (k === '[' && prevUrl) window.location.href = prevUrl;
+        else if (k === ']' && nextUrl) window.location.href = nextUrl;
+        else handled = false;
+        if (handled) e.preventDefault();
+      });
+    </script>
+  </body>
+</html>

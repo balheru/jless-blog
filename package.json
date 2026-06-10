@@ -1,0 +1,28 @@
+{
+  "name": "focused-noether",
+  "description": "JSON-structured terminal blog with Vim keyboard navigation.",
+  "type": "module",
+  "version": "2.0.0",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "preview": "astro preview",
+    "astro": "astro",
+    "generate:posts": "node scripts/generate-posts.mjs",
+    "test": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@astrojs/svelte": "^8.1.2",
+    "astro": "^6.4.5",
+    "svelte": "^5.56.3"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "pagefind": "^1.5.2",
+    "vitest": "^4.1.8"
+  }
+}
