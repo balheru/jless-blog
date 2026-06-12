@@ -1,0 +1,74 @@
+name: Publish
+
+on:
+  push:
+    branches: [main]
+  repository_dispatch:
+    types: [vault-updated]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # On vault-updated dispatch (or manual run), pull Blog/ from the vault
+      # repo and commit any new/changed posts before building.
+      - name: Check out vault Blog folder
+        if: github.event_name != 'push'
+        uses: actions/checkout@v4
+        with:
+          repository: balheru/claude-collab
+          token: ${{ secrets.VAULT_SYNC_TOKEN }}
+          path: _vault
+          sparse-checkout: Blog
+
+      - name: Commit synced posts
+        if: github.event_name != 'push'
+        run: |
+          mkdir -p src/content/posts
+          if compgen -G '_vault/Blog/*.md' > /dev/null; then
+            cp _vault/Blog/*.md src/content/posts/
+          fi
+          rm -rf _vault
+          git config user.name "vault-sync"
+          git config user.email "actions@github.com"
+          git add src/content/posts
+          if ! git diff --cached --quiet; then
+            git commit -m "Sync posts from vault"
+            git push
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build (Astro + Pagefind)
+        run: npm run build
+
+      - name: E2E tests
+        run: |
+          npx playwright install chromium --with-deps
+          npm run test:e2e
+
+      - name: Deploy to Cloudflare
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

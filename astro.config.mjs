@@ -3,7 +3,7 @@ import { defineConfig } from 'astro/config';
 import svelte from '@astrojs/svelte';
 
 export default defineConfig({
-  site: 'https://focused-noether.example',
+  site: 'https://blog.thenightside.xyz',
   integrations: [svelte()],
   markdown: {
     shikiConfig: {
