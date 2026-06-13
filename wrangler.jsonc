@@ -4,7 +4,6 @@
   "assets": {
     "directory": "./dist",
     "html_handling": "auto-trailing-slash"
-  }
-  // Custom domain: uncomment once the thenightside.xyz zone is on Cloudflare.
-  // "routes": [{ "pattern": "blog.thenightside.xyz", "custom_domain": true }]
+  },
+  "routes": [{ "pattern": "blog.thenightside.xyz", "custom_domain": true }]
 }
