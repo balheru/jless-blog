@@ -29,7 +29,7 @@ prototype (`prototype/index.html`) and specifies the production rewrite
 | border            | `#282c34` | Pane borders, separators, kbd background   |
 | border-soft       | `#3e4451` | kbd borders, scrollbar hover               |
 | fg                | `#abb2bf` | Body text, brackets, commas                |
-| fg-dim            | `#5c6370` | Muted text, null values, hints             |
+| fg-dim            | `#8090a0` | Muted text, null values, hints             |
 | fg-gutter         | `#8c96a8` | Line numbers, fold arrows                  |
 | accent            | `#61afef` | Active pane border, headers, cursor, links |
 | key               | `#e06c75` | JSON keys, inline code                     |
@@ -289,7 +289,9 @@ from state; nothing is rebuilt imperatively.
   Tab interception.
 - Search count region is `aria-live="polite"`. Help overlay is
   `role="dialog"` `aria-modal="true"` with focus trap and focus restore.
-- All color pairs meet WCAG AA on their backgrounds at the sizes used.
+- Text color pairs meet WCAG AA on their backgrounds at the sizes used
+  (`fg-dim` `#8090a0` is ~5:1 on the pane backgrounds; lightened from the
+  original `#5c6370`, which failed AA at ~2.7:1).
 
 ## 12. Architecture (rewrite)
 
