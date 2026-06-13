@@ -86,13 +86,12 @@ blockquotes.
 - **Metadata**: `{ name, version, description, author: { alias, git,
   specialty } }` from a site constants module.
 
-### 3.3 Test data
+### 3.3 Content
 
-`scripts/generate-posts.mjs` deterministically generates 75 markdown posts
-spanning June 2016 - June 2026 using the prototype's seeded PRNG
-(`sin(seed++) * 10000`, seed 12345), the same title/topic/field templates,
-paragraph pool, and 2-4 tags per post from the same tag pool. Output is
-committed; regenerating produces identical files.
+Posts are authored markdown under `src/content/posts/`, one file per post,
+validated against the frontmatter schema in `src/content.config.ts`. The site
+launched with a single hand-written post; earlier development used a seeded
+generator (`scripts/generate-posts.mjs`), removed once real content landed.
 
 ## 4. Layout
 
