@@ -150,11 +150,11 @@ test('post page renders footnotes as dynamic left/right sidenotes', async ({ pag
   await expect(page.locator('.reader-post h1').first()).toContainText('testing');
 
   // Footnote references should be visible
-  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(16);
+  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(23);
 
   // Sidenotes should be injected next to references
   const sidenotes = page.locator('.reader-body .sidenote');
-  await expect(sidenotes).toHaveCount(16);
+  await expect(sidenotes).toHaveCount(23);
 
   // Sidenote 1 (default) -> right
   await expect(sidenotes.nth(0)).toHaveClass(/sidenote-right/);
@@ -173,35 +173,70 @@ test('post page renders footnotes as dynamic left/right sidenotes', async ({ pag
   // Footnotes footer at bottom should be hidden
   await expect(page.locator('.footnotes')).toBeHidden();
 
-  // Verify that the anti-overlap positioning pushed Sidenote 3 down relative to Sidenote 1,
-  // Sidenote 5 down relative to Sidenote 4, and that Sidenote 16 is positioned far down
-  // on a desktop-sized viewport (1280px wide)
+  // Verify that the anti-overlap positioning works for:
+  // - 1 vs 3
+  // - 5-deep stack on right (4, 5, 17, 18, 19)
+  // - 5-deep stack on left (6, 20, 21, 22, 23)
+  // - final note far down (16)
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(200); // allow layout to stabilize
 
   const box1 = await sidenotes.nth(0).boundingBox();
   const box3 = await sidenotes.nth(2).boundingBox();
+
+  // Right-hand 5-deep stack
   const box4 = await sidenotes.nth(3).boundingBox();
   const box5 = await sidenotes.nth(4).boundingBox();
-  const box16 = await sidenotes.nth(15).boundingBox();
+  const box17 = await sidenotes.nth(5).boundingBox();
+  const box18 = await sidenotes.nth(6).boundingBox();
+  const box19 = await sidenotes.nth(7).boundingBox();
+
+  // Left-hand 5-deep stack
+  const box6 = await sidenotes.nth(8).boundingBox();
+  const box20 = await sidenotes.nth(9).boundingBox();
+  const box21 = await sidenotes.nth(10).boundingBox();
+  const box22 = await sidenotes.nth(11).boundingBox();
+  const box23 = await sidenotes.nth(12).boundingBox();
+
+  // Final note (index 22)
+  const box16 = await sidenotes.nth(22).boundingBox();
 
   expect(box1).not.toBeNull();
   expect(box3).not.toBeNull();
   expect(box4).not.toBeNull();
   expect(box5).not.toBeNull();
+  expect(box17).not.toBeNull();
+  expect(box18).not.toBeNull();
+  expect(box19).not.toBeNull();
+  expect(box6).not.toBeNull();
+  expect(box20).not.toBeNull();
+  expect(box21).not.toBeNull();
+  expect(box22).not.toBeNull();
+  expect(box23).not.toBeNull();
   expect(box16).not.toBeNull();
 
   if (box1 && box3) {
-    // Sidenote 3 must sit below Sidenote 1
     expect(box3.y).toBeGreaterThanOrEqual(box1.y + box1.height);
   }
-  if (box4 && box5) {
-    // Sidenote 5 must sit below Sidenote 4 (anti-collision check)
+
+  // Assert right-side 5-deep stack resolves collisions
+  if (box4 && box5 && box17 && box18 && box19) {
     expect(box5.y).toBeGreaterThanOrEqual(box4.y + box4.height);
+    expect(box17.y).toBeGreaterThanOrEqual(box5.y + box5.height);
+    expect(box18.y).toBeGreaterThanOrEqual(box17.y + box17.height);
+    expect(box19.y).toBeGreaterThanOrEqual(box18.y + box18.height);
   }
-  if (box5 && box16) {
-    // Sidenote 16 (Section 12) should be far below the early notes
-    expect(box16.y).toBeGreaterThan(box5.y + 500);
+
+  // Assert left-side 5-deep stack resolves collisions
+  if (box6 && box20 && box21 && box22 && box23) {
+    expect(box20.y).toBeGreaterThanOrEqual(box6.y + box6.height);
+    expect(box21.y).toBeGreaterThanOrEqual(box20.y + box20.height);
+    expect(box22.y).toBeGreaterThanOrEqual(box21.y + box21.height);
+    expect(box23.y).toBeGreaterThanOrEqual(box22.y + box22.height);
+  }
+
+  if (box19 && box16) {
+    expect(box16.y).toBeGreaterThan(box19.y + 500);
   }
 });
 

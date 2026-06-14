@@ -21,9 +21,9 @@ This is the second paragraph of Section 1. It provides background context on the
 
 ## Section 2: Stacking and Collisions
 
-In this section, we test the vertical stacking of multiple sidenotes placed close to one another on the same side of the page. This sentence contains the first note[^4]. Immediately after it, we place another note[^5] to trigger the anti-collision algorithm. We also place a left sidenote[^6] in the same paragraph to test left-hand margin stacking.
+In this section, we test the vertical stacking of multiple sidenotes placed close to one another on the same side of the page. This sentence contains five right-hand sidenotes in a row[^4] to test the limits of right-side stacking[^5] and anti-collision logic[^17] with multiple adjacent references[^18] placed in sequence[^19].
 
-This is the second paragraph of Section 2. We add a longer block of text here to separate the sections. This ensures that the next paragraph has its own layout coordinates. Sidenotes allow authors to place context inline without disrupting the narrative flow.
+On the other side, we test five left-hand sidenotes in a row[^6] to verify that left-side stacking works identically[^20] and pushes subsequent notes down cleanly[^21] in response to adjacent reference points[^22] in the left margin[^23].
 
 ## Section 3: Navigation Model
 
@@ -88,9 +88,16 @@ This is the second paragraph of Section 12. This is the last sentence of the doc
 [^1]: This is a default sidenote which will render on the right.
 [^2]: L: This is a left sidenote explaining the vault pipeline.
 [^3]: R: This is a right sidenote explaining the reader layout.
-[^4]: R: First stacked note on the right side.
-[^5]: R: Second stacked note on the right side, which should be pushed down.
-[^6]: L: Left stacked note that sits in the left margin.
+[^4]: R: First right-hand stacked note.
+[^5]: R: Second right-hand stacked note.
+[^17]: R: Third right-hand stacked note.
+[^18]: R: Fourth right-hand stacked note.
+[^19]: R: Fifth right-hand stacked note.
+[^6]: L: First left-hand stacked note.
+[^20]: L: Second left-hand stacked note.
+[^21]: L: Third left-hand stacked note.
+[^22]: L: Fourth left-hand stacked note.
+[^23]: L: Fifth left-hand stacked note.
 [^7]: R: Section 3 right-aligned note.
 [^8]: L: Section 4 left-aligned note.
 [^9]: R: Section 5 right-aligned note.
