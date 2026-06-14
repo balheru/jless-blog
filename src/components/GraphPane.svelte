@@ -13,7 +13,7 @@
 
   let { posts, activePostSlug, active, onselectpost, onselecttag, onactivate }: Props = $props();
 
-  const R_max = 210;
+  const R_max = 350;
 
   // Graph elements
   interface Node {
@@ -129,9 +129,9 @@
 
       // Define shell radius based on non-Euclidean Poincaré-like expansion
       let R = 0;
-      if (d === 1) R = 75;
-      else if (d === 2) R = 130;
-      else if (d === 3) R = 180;
+      if (d === 1) R = 120;
+      else if (d === 2) R = 210;
+      else if (d === 3) R = 300;
       else if (d > 3) R = R_max;
 
       for (let i = 0; i < N; i++) {
