@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('renders all panes with the posts tree and status bar', async ({ page }) => {
-  for (const pane of ['dates-pane', 'posts-pane', 'metadata-pane']) {
+  for (const pane of ['dates-pane', 'graph-pane', 'posts-pane', 'metadata-pane']) {
     await expect(page.locator(`#${pane}`)).toBeVisible();
   }
   await expect(page.locator('#posts-pane')).toHaveClass(/active-pane/);
@@ -112,6 +112,26 @@ test('help overlay opens with ? and closes with Escape', async ({ page }) => {
   await expect(page.locator('.help-box')).toContainText('VIM KEYBOARD SHORTCUTS');
   await page.keyboard.press('Escape');
   await expect(page.locator('.help-overlay')).toHaveCount(0);
+});
+
+test('graph view displays nodes and responds to tag filter clicks', async ({ page }) => {
+  const graphPane = page.locator('#graph-pane');
+  await expect(graphPane).toBeVisible();
+
+  // Select the first post in the posts tree to set it as active
+  await page.keyboard.press('j');
+
+  // Verify that the active post node is highlighted in the graph SVG
+  const activeNode = page.locator('#graph-pane .graph-node.is-active-node');
+  await expect(activeNode).toBeVisible();
+
+  // Find a tag node (e.g., 'cloudflare') and click/dispatch click on it
+  const tagNode = page.locator('#graph-pane .graph-node', { hasText: 'cloudflare' });
+  await expect(tagNode).toBeVisible();
+  await tagNode.dispatchEvent('click');
+
+  // Clicking a tag filters the posts list and changes focus to the posts pane
+  await expect(page.locator('#posts-pane')).toHaveClass(/active-pane/);
 });
 
 test('deep link renders the post page and pager scrolls', async ({ page }) => {

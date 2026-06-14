@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import TreePane from './TreePane.svelte';
+  import GraphPane from './GraphPane.svelte';
 
   import StatusBar from './StatusBar.svelte';
   import HelpOverlay from './HelpOverlay.svelte';
@@ -21,15 +22,16 @@
 
   let { posts, datesTree, metadata, version }: Props = $props();
 
-  type PaneId = 'dates' | 'posts' | 'metadata';
-  const PANE_ORDER: PaneId[] = ['dates', 'posts', 'metadata'];
+  type PaneId = 'dates' | 'graph' | 'posts' | 'metadata';
+  const PANE_ORDER: PaneId[] = ['dates', 'graph', 'posts', 'metadata'];
   const EMPTY_SET: ReadonlySet<string> = new Set();
 
   // ---------- state (the entire UI state; everything else is derived)
   let activePane = $state<PaneId>('posts');
-  let selections = $state<Record<PaneId, number>>({ dates: 0, posts: 0, metadata: 0 });
+  let selections = $state<Record<PaneId, number>>({ dates: 0, graph: 0, posts: 0, metadata: 0 });
   const collapsedSets: Record<PaneId, SvelteSet<string>> = {
     dates: new SvelteSet(),
+    graph: new SvelteSet(),
     posts: new SvelteSet(),
     metadata: new SvelteSet()
   };
@@ -106,10 +108,10 @@
   const visMeta = $derived(visibleLines(metaLines, collapsedSets.metadata));
 
   function allLines(pane: PaneId): Line[] {
-    return pane === 'dates' ? datesLines : pane === 'posts' ? postsLines : metaLines;
+    return pane === 'dates' ? datesLines : pane === 'posts' ? postsLines : pane === 'metadata' ? metaLines : [];
   }
   function vis(pane: PaneId): Line[] {
-    return pane === 'dates' ? visDates : pane === 'posts' ? visPosts : visMeta;
+    return pane === 'dates' ? visDates : pane === 'posts' ? visPosts : pane === 'metadata' ? visMeta : [];
   }
 
   // Posts pane: whenever its contents change, post nodes start collapsed and
@@ -453,6 +455,31 @@
     });
   }
 
+  function selectPostFromGraph(slug: string) {
+    activePane = 'posts';
+    const line = postsLines.find((l) => l.postRoot && l.postSlug === slug);
+    if (line) {
+      if (collapsedSets.posts.has(line.path)) {
+        collapsedSets.posts.delete(line.path);
+      }
+      // Give Svelte a tick to derive visPosts with the expanded post
+      requestAnimationFrame(() => {
+        const idx = visPosts.findIndex((l) => l.path === line.path);
+        if (idx !== -1) {
+          selections.posts = idx;
+          refocusSelected();
+        }
+      });
+    }
+  }
+
+  function selectTagFromGraph(tag: string) {
+    tagFilter = tag;
+    activePane = 'posts';
+    selections.posts = 0;
+    refocusSelected();
+  }
+
   // ---------- key router (explicit event.key switch; mode-guarded)
   let gTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -526,19 +553,29 @@
 <svelte:window onkeydown={onKeydown} />
 
 <main class="app-body">
-  <TreePane
-    paneId="dates"
-    title="Dates"
-    lines={visDates}
-    selectedIndex={selections.dates}
-    active={activePane === 'dates'}
-    collapsed={collapsedSets.dates}
-    matched={matchedFor('dates')}
-    stripQuotes
-    onactivate={() => (activePane = 'dates')}
-    onselect={(i) => (selections.dates = i)}
-    ontoggle={(l) => toggleFoldLine('dates', l)}
-  />
+  <div class="left-column">
+    <TreePane
+      paneId="dates"
+      title="Dates"
+      lines={visDates}
+      selectedIndex={selections.dates}
+      active={activePane === 'dates'}
+      collapsed={collapsedSets.dates}
+      matched={matchedFor('dates')}
+      stripQuotes
+      onactivate={() => (activePane = 'dates')}
+      onselect={(i) => (selections.dates = i)}
+      ontoggle={(l) => toggleFoldLine('dates', l)}
+    />
+    <GraphPane
+      posts={posts}
+      activePostSlug={selectedPostSlug}
+      active={activePane === 'graph'}
+      onselectpost={selectPostFromGraph}
+      onselecttag={selectTagFromGraph}
+      onactivate={() => (activePane = 'graph')}
+    />
+  </div>
 
   <TreePane
     paneId="posts"
