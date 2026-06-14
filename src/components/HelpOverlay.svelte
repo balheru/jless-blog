@@ -54,8 +54,12 @@
       rows: [
         ['Enter / o', 'Open the article page (when on a post)'],
         ['q / Esc', 'Close article page and return to the browser'],
-        ['j / k', 'Scroll article down/up line-by-line (Pager Mode)'],
-        ['Space / PgDn', 'Scroll article down by page (Pager Mode)'],
+        ['j / k / ↓ / ↑', 'Scroll article down/up line-by-line (Pager Mode)'],
+        ['Space / PgDn / f', 'Scroll article down by page (Pager Mode)'],
+        ['PgUp / b', 'Scroll article up by page (Pager Mode)'],
+        ['d / u', 'Scroll article down/up by half page (Pager Mode)'],
+        ['g g / Home', 'Scroll to top of the article (Pager Mode)'],
+        ['G / End', 'Scroll to bottom of the article (Pager Mode)'],
         ['[ / ]', 'Previous / next article (Pager Mode)']
       ]
     },

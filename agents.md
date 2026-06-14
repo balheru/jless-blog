@@ -103,6 +103,18 @@ The interface operates under four distinct modes:
 - `?`: Toggle the Help overlay.
 - `Esc`: Clear tag filters (takes priority) or clear search query and highlights.
 
+### PAGER Mode Keybindings
+- `j` / `ArrowDown`: Scroll article down by line (40px).
+- `k` / `ArrowUp`: Scroll article up by line (40px).
+- `Space` / `PageDown` / `f`: Scroll article down by page.
+- `PageUp` / `b`: Scroll article up by page.
+- `d`: Scroll article down by half page.
+- `u`: Scroll article up by half page.
+- `g g` / `Home`: Scroll to top of the article.
+- `G` / `End`: Scroll to bottom of the article.
+- `[` / `]`: Navigate to the previous / next article.
+- `q` / `Escape`: Close article and return to the index page.
+
 ---
 
 ## 4. Development Workflow

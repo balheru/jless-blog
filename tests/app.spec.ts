@@ -138,11 +138,67 @@ test('deep link renders the post page and pager scrolls', async ({ page }) => {
   await page.goto(`/posts/${SLUG}/`);
   await expect(page.locator('.reader-body h1')).toContainText(TITLE);
   await expect(page.locator('.reader-body pre.astro-code').first()).toBeVisible(); // Shiki
-  const before = await page.locator('#pager-main').evaluate((el) => el.scrollTop);
+
+  const pager = page.locator('#pager-main');
+
+  // Initial scroll top should be 0
+  let top = await pager.evaluate((el) => el.scrollTop);
+  expect(top).toBe(0);
+
+  // Test line scroll down (j)
   await page.keyboard.press('j');
-  await page.keyboard.press('j');
-  const after = await page.locator('#pager-main').evaluate((el) => el.scrollTop);
-  expect(after).toBeGreaterThan(before);
+  let topJ = await pager.evaluate((el) => el.scrollTop);
+  expect(topJ).toBeGreaterThan(0);
+
+  // Test line scroll up (k)
+  await page.keyboard.press('k');
+  let topK = await pager.evaluate((el) => el.scrollTop);
+  expect(topK).toBeLessThan(topJ);
+
+  // Test half page scroll down (d)
+  await page.keyboard.press('d');
+  let topD = await pager.evaluate((el) => el.scrollTop);
+  expect(topD).toBeGreaterThan(topK);
+
+  // Test half page scroll up (u)
+  await page.keyboard.press('u');
+  let topU = await pager.evaluate((el) => el.scrollTop);
+  expect(topU).toBeLessThan(topD);
+
+  // Test page scroll down (f)
+  await page.keyboard.press('f');
+  let topF = await pager.evaluate((el) => el.scrollTop);
+  expect(topF).toBeGreaterThan(topU);
+
+  // Test page scroll up (b)
+  await page.keyboard.press('b');
+  let topB = await pager.evaluate((el) => el.scrollTop);
+  expect(topB).toBeLessThan(topF);
+
+  // Test scroll to bottom (G)
+  await page.keyboard.press('G');
+  await page.waitForTimeout(100);
+  let topG = await pager.evaluate((el) => el.scrollTop);
+  expect(topG).toBeGreaterThan(0);
+
+  // Test scroll to top (g g)
+  await page.keyboard.press('g');
+  await page.keyboard.press('g');
+  await page.waitForTimeout(100);
+  let topGG = await pager.evaluate((el) => el.scrollTop);
+  expect(topGG).toBe(0);
+
+  // Test scroll to bottom (End)
+  await page.keyboard.press('End');
+  await page.waitForTimeout(100);
+  let topEnd = await pager.evaluate((el) => el.scrollTop);
+  expect(topEnd).toBeGreaterThan(0);
+
+  // Test scroll to top (Home)
+  await page.keyboard.press('Home');
+  await page.waitForTimeout(100);
+  let topHome = await pager.evaluate((el) => el.scrollTop);
+  expect(topHome).toBe(0);
 });
 
 test('post page renders footnotes as dynamic left/right sidenotes', async ({ page }) => {
