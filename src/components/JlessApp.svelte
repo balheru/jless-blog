@@ -2,7 +2,7 @@
   import { untrack } from 'svelte';
   import { SvelteSet } from 'svelte/reactivity';
   import TreePane from './TreePane.svelte';
-  import ReaderPane from './ReaderPane.svelte';
+
   import StatusBar from './StatusBar.svelte';
   import HelpOverlay from './HelpOverlay.svelte';
   import {
@@ -519,33 +519,19 @@
 <svelte:window onkeydown={onKeydown} />
 
 <main class="app-body">
-  <div class="left-column">
-    <TreePane
-      paneId="dates"
-      title="Dates"
-      lines={visDates}
-      selectedIndex={selections.dates}
-      active={activePane === 'dates'}
-      collapsed={collapsedSets.dates}
-      matched={matchedFor('dates')}
-      stripQuotes
-      onactivate={() => (activePane = 'dates')}
-      onselect={(i) => (selections.dates = i)}
-      ontoggle={(l) => toggleFoldLine('dates', l)}
-    />
-    <TreePane
-      paneId="metadata"
-      title="Metadata"
-      lines={visMeta}
-      selectedIndex={selections.metadata}
-      active={activePane === 'metadata'}
-      collapsed={collapsedSets.metadata}
-      matched={matchedFor('metadata')}
-      onactivate={() => (activePane = 'metadata')}
-      onselect={(i) => (selections.metadata = i)}
-      ontoggle={(l) => toggleFoldLine('metadata', l)}
-    />
-  </div>
+  <TreePane
+    paneId="dates"
+    title="Dates"
+    lines={visDates}
+    selectedIndex={selections.dates}
+    active={activePane === 'dates'}
+    collapsed={collapsedSets.dates}
+    matched={matchedFor('dates')}
+    stripQuotes
+    onactivate={() => (activePane = 'dates')}
+    onselect={(i) => (selections.dates = i)}
+    ontoggle={(l) => toggleFoldLine('dates', l)}
+  />
 
   <TreePane
     paneId="posts"
@@ -562,7 +548,18 @@
     ontoggle={(l) => toggleFoldLine('posts', l)}
   />
 
-  <ReaderPane post={previewPost} bodyHtml={previewHtml} loading={previewLoading} />
+  <TreePane
+    paneId="metadata"
+    title="Metadata"
+    lines={visMeta}
+    selectedIndex={selections.metadata}
+    active={activePane === 'metadata'}
+    collapsed={collapsedSets.metadata}
+    matched={matchedFor('metadata')}
+    onactivate={() => (activePane = 'metadata')}
+    onselect={(i) => (selections.metadata = i)}
+    ontoggle={(l) => toggleFoldLine('metadata', l)}
+  />
 </main>
 
 <StatusBar
