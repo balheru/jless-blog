@@ -253,23 +253,7 @@
   <div class="pane-header">Graph View</div>
   <div class="pane-content graph-content">
     <svg class="graph-svg">
-      <defs>
-        <radialGradient id="sky" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stop-color="#1e1e24" stop-opacity="0" />
-          <stop offset="100%" stop-color="#111115" stop-opacity="0.8" />
-        </radialGradient>
-      </defs>
 
-      <!-- Background boundary circle -->
-      <circle
-        cx={centerOffsetX}
-        cy={centerOffsetY}
-        r={Math.min(centerOffsetX, centerOffsetY) * 0.9}
-        fill="url(#sky)"
-        stroke="var(--border)"
-        stroke-width="1"
-        stroke-dasharray="2 4"
-      />
 
       <!-- Links (edges) -->
       {#each links as link}
