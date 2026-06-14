@@ -13,6 +13,8 @@
 
   let { posts, activePostSlug, active, onselectpost, onselecttag, onactivate }: Props = $props();
 
+  const R_max = 210;
+
   // Graph elements
   interface Node {
     id: string;
@@ -127,10 +129,10 @@
 
       // Define shell radius based on non-Euclidean Poincaré-like expansion
       let R = 0;
-      if (d === 1) R = 45;
-      else if (d === 2) R = 80;
-      else if (d === 3) R = 110;
-      else if (d > 3) R = 130;
+      if (d === 1) R = 75;
+      else if (d === 2) R = 130;
+      else if (d === 3) R = 180;
+      else if (d > 3) R = R_max;
 
       for (let i = 0; i < N; i++) {
         const id = ids[i];
@@ -182,8 +184,6 @@
       const cosP = Math.cos(phi);
       const sinP = Math.sin(phi);
 
-      const R_max = 130;
-
       for (const n of nodes) {
         const id = n.id;
         const target = targetCoords[id] || { x: 0, y: 0, z: 0 };
@@ -210,8 +210,8 @@
 
         // Depth cueing scaling
         const normZ = R_max > 0 ? z2 / R_max : 0;
-        const depthScale = 1.0 + normZ * 0.45;
-        const opacity = 0.3 + 0.7 * (normZ + 1.0) / 2;
+        const depthScale = 1.0 + normZ * 0.75;
+        const opacity = 0.1 + 0.9 * (normZ + 1.0) / 2;
 
         nextRender[id] = {
           x: x2,
@@ -261,7 +261,7 @@
         {@const t = renderCoords[link.target]}
         {#if s && t}
           {@const avgZ = (s.z + t.z) / 2}
-          {@const normZ = avgZ / 130}
+          {@const normZ = avgZ / R_max}
           {@const linkOpacity = 0.12 + 0.28 * (normZ + 1.0) / 2}
           <line
             x1={s.x + centerOffsetX}
@@ -298,7 +298,7 @@
           >
             {#if node.slug === activePostSlug}
               <circle
-                r={6 * r.depthScale}
+                r={10 * r.depthScale}
                 fill="none"
                 stroke="var(--accent)"
                 stroke-width="2"
@@ -306,7 +306,7 @@
               >
                 <animate
                   attributeName="r"
-                  values="{6 * r.depthScale};{11 * r.depthScale};{6 * r.depthScale}"
+                  values="{10 * r.depthScale};{18 * r.depthScale};{10 * r.depthScale}"
                   dur="2s"
                   repeatCount="indefinite"
                 />
@@ -314,7 +314,7 @@
             {/if}
 
             <circle
-              r={(node.type === 'post' ? 4.5 : 3) * r.depthScale}
+              r={(node.slug === activePostSlug ? 8 : (node.type === 'post' ? 4.5 : 3)) * r.depthScale}
               fill={node.slug === activePostSlug
                 ? 'var(--accent)'
                 : node.type === 'post'
@@ -325,7 +325,7 @@
             />
 
             <text
-              x={6 * r.depthScale}
+              x={(node.slug === activePostSlug ? 11 : 6) * r.depthScale}
               y={3 * r.depthScale}
               fill={node.slug === activePostSlug ? 'var(--accent)' : 'var(--fg-dim)'}
               fill-opacity={r.opacity > 0.65 || node.slug === activePostSlug ? 1 : 0}
