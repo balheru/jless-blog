@@ -95,6 +95,76 @@ const { title, date, author, tags, summary } = entry.data;
         else handled = false;
         if (handled) e.preventDefault();
       });
+
+      function initSidenotes() {
+        const body = document.querySelector('.reader-body');
+        const footnotesSection = document.querySelector('.footnotes');
+        if (!body || !footnotesSection) return;
+
+        const footnoteItems = footnotesSection.querySelectorAll('ol > li');
+        footnoteItems.forEach((li) => {
+          const id = li.getAttribute('id');
+          if (!id) return;
+
+          const refLink = body.querySelector(`a[href="#${id}"]`);
+          if (!refLink) return;
+
+          const refParent = refLink.closest('sup') || refLink;
+          let content = li.innerHTML;
+
+          // Strip the GFM backreference link
+          content = content.replace(/<a\s+[^>]*class="[^"]*(data-)?footnote-backref"[^>]*>.*?<\/a>/gi, '');
+          content = content.replace(/<a\s+[^>]*data-footnote-backref[^>]*>.*?<\/a>/gi, '');
+          content = content.replace(/↩/g, '').trim();
+
+          // Check for direction prefix (default: right)
+          let side = 'right';
+          const leftPattern = /^<p>\s*(L|left)\s*:\s*(.*)/i;
+          const leftMatch = content.match(leftPattern);
+          if (leftMatch) {
+            side = 'left';
+            content = content.replace(leftPattern, '<p>$2');
+          } else {
+            const leftMatchNoP = content.match(/^\s*(L|left)\s*:\s*(.*)/i);
+            if (leftMatchNoP) {
+              side = 'left';
+              content = leftMatchNoP[2];
+            }
+          }
+
+          const rightPattern = /^<p>\s*(R|right)\s*:\s*(.*)/i;
+          const rightMatch = content.match(rightPattern);
+          if (rightMatch) {
+            side = 'right';
+            content = content.replace(rightPattern, '<p>$2');
+          } else {
+            const rightMatchNoP = content.match(/^\s*(R|right)\s*:\s*(.*)/i);
+            if (rightMatchNoP) {
+              side = 'right';
+              content = rightMatchNoP[2];
+            }
+          }
+
+          // Create the sidenote container
+          const sidenote = document.createElement('span');
+          sidenote.className = `sidenote sidenote-${side}`;
+          sidenote.innerHTML = content;
+
+          // Insert directly after footnote reference anchor parent
+          refParent.parentNode?.insertBefore(sidenote, refParent.nextSibling);
+        });
+
+        // Hide original footnotes
+        if (footnotesSection instanceof HTMLElement) {
+          footnotesSection.style.display = 'none';
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSidenotes);
+      } else {
+        initSidenotes();
+      }
     </script>
   </body>
 </html>

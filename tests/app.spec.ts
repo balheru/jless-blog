@@ -144,3 +144,33 @@ test('deep link renders the post page and pager scrolls', async ({ page }) => {
   const after = await page.locator('#pager-main').evaluate((el) => el.scrollTop);
   expect(after).toBeGreaterThan(before);
 });
+
+test('post page renders footnotes as dynamic left/right sidenotes', async ({ page }) => {
+  await page.goto('/posts/testing/');
+  await expect(page.locator('.reader-post h1').first()).toContainText('testing');
+
+  // Footnote references should be visible
+  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(3);
+
+  // Sidenotes should be injected next to references
+  const sidenotes = page.locator('.reader-body .sidenote');
+  await expect(sidenotes).toHaveCount(3);
+
+  // Sidenote 1 (default) -> right
+  await expect(sidenotes.nth(0)).toHaveClass(/sidenote-right/);
+  await expect(sidenotes.nth(0)).toContainText('This is a default sidenote');
+
+  // Sidenote 2 (prefix L:) -> left, with prefix stripped
+  await expect(sidenotes.nth(1)).toHaveClass(/sidenote-left/);
+  await expect(sidenotes.nth(1)).toContainText('This is a left sidenote explaining');
+  await expect(sidenotes.nth(1)).not.toContainText('L:');
+
+  // Sidenote 3 (prefix R:) -> right, with prefix stripped
+  await expect(sidenotes.nth(2)).toHaveClass(/sidenote-right/);
+  await expect(sidenotes.nth(2)).toContainText('This is a right sidenote explaining');
+  await expect(sidenotes.nth(2)).not.toContainText('R:');
+
+  // Footnotes footer at bottom should be hidden
+  await expect(page.locator('.footnotes')).toBeHidden();
+});
+
