@@ -96,6 +96,41 @@ const { title, date, author, tags, summary } = entry.data;
         if (handled) e.preventDefault();
       });
 
+      function adjustSidenotes() {
+        const body = document.querySelector('.reader-body');
+        if (!body) return;
+
+        if (window.innerWidth < 1200) {
+          body.querySelectorAll('.sidenote').forEach((note) => {
+            if (note instanceof HTMLElement) note.style.top = '';
+          });
+          return;
+        }
+
+        const leftNotes = Array.from(body.querySelectorAll('.sidenote-left')) as HTMLElement[];
+        const rightNotes = Array.from(body.querySelectorAll('.sidenote-right')) as HTMLElement[];
+
+        const sortAndReset = (notes: HTMLElement[]) => {
+          notes.forEach((note) => (note.style.top = ''));
+          return notes.sort((a, b) => a.offsetTop - b.offsetTop);
+        };
+
+        const adjust = (notes: HTMLElement[]) => {
+          let lastBottom = 0;
+          notes.forEach((note) => {
+            let top = note.offsetTop;
+            if (top < lastBottom) {
+              top = lastBottom + 12; // 12px margin gap
+              note.style.top = `${top}px`;
+            }
+            lastBottom = top + note.offsetHeight;
+          });
+        };
+
+        adjust(sortAndReset(leftNotes));
+        adjust(sortAndReset(rightNotes));
+      }
+
       function initSidenotes() {
         const body = document.querySelector('.reader-body');
         const footnotesSection = document.querySelector('.footnotes');
@@ -158,6 +193,9 @@ const { title, date, author, tags, summary } = entry.data;
         if (footnotesSection instanceof HTMLElement) {
           footnotesSection.style.display = 'none';
         }
+
+        // Adjust vertical positions of sidenotes to prevent overlaps
+        adjustSidenotes();
       }
 
       if (document.readyState === 'loading') {
@@ -165,6 +203,9 @@ const { title, date, author, tags, summary } = entry.data;
       } else {
         initSidenotes();
       }
+
+      window.addEventListener('resize', adjustSidenotes);
+      window.addEventListener('load', adjustSidenotes);
     </script>
   </body>
 </html>

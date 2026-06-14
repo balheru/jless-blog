@@ -172,5 +172,20 @@ test('post page renders footnotes as dynamic left/right sidenotes', async ({ pag
 
   // Footnotes footer at bottom should be hidden
   await expect(page.locator('.footnotes')).toBeHidden();
+
+  // Verify that the anti-overlap positioning pushed Sidenote 3 down relative to Sidenote 1
+  // on a desktop-sized viewport (1280px wide)
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(200); // allow layout to stabilize
+
+  const box1 = await sidenotes.nth(0).boundingBox();
+  const box3 = await sidenotes.nth(2).boundingBox();
+
+  expect(box1).not.toBeNull();
+  expect(box3).not.toBeNull();
+  if (box1 && box3) {
+    // Sidenote 3 must sit below Sidenote 1
+    expect(box3.y).toBeGreaterThanOrEqual(box1.y + box1.height);
+  }
 });
 
