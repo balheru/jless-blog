@@ -81,18 +81,56 @@ const { title, date, author, tags, summary } = entry.data;
       // Let the index restore its selection to this post on return
       if (slug) sessionStorage.setItem('jless:lastPost', slug);
 
+      let keyBuffer = '';
+      let gTimer: any;
+
       window.addEventListener('keydown', (e) => {
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         const k = e.key;
+        const pendingG = keyBuffer === 'g';
+        if (k !== 'g' && pendingG) {
+          keyBuffer = '';
+          clearTimeout(gTimer);
+        }
+
         let handled = true;
-        if (k === 'j' || k === 'ArrowDown') main.scrollTop += 40;
-        else if (k === 'k' || k === 'ArrowUp') main.scrollTop -= 40;
-        else if (k === ' ' || k === 'PageDown') main.scrollTop += main.clientHeight - 40;
-        else if (k === 'PageUp') main.scrollTop -= main.clientHeight - 40;
-        else if (k === 'q' || k === 'Escape') window.location.href = '/';
-        else if (k === '[' && prevUrl) window.location.href = prevUrl;
-        else if (k === ']' && nextUrl) window.location.href = nextUrl;
-        else handled = false;
+        if (k === 'j' || k === 'ArrowDown') {
+          main.scrollTop += 40;
+        } else if (k === 'k' || k === 'ArrowUp') {
+          main.scrollTop -= 40;
+        } else if (k === ' ' || k === 'PageDown' || k === 'f') {
+          main.scrollTop += main.clientHeight - 40;
+        } else if (k === 'PageUp' || k === 'b') {
+          main.scrollTop -= main.clientHeight - 40;
+        } else if (k === 'd') {
+          main.scrollTop += Math.floor(main.clientHeight / 2);
+        } else if (k === 'u') {
+          main.scrollTop -= Math.floor(main.clientHeight / 2);
+        } else if (k === 'g') {
+          if (pendingG) {
+            keyBuffer = '';
+            clearTimeout(gTimer);
+            main.scrollTop = 0;
+          } else {
+            keyBuffer = 'g';
+            clearTimeout(gTimer);
+            gTimer = setTimeout(() => {
+              keyBuffer = '';
+            }, 500);
+          }
+        } else if (k === 'G' || k === 'End') {
+          main.scrollTop = main.scrollHeight;
+        } else if (k === 'Home') {
+          main.scrollTop = 0;
+        } else if (k === 'q' || k === 'Escape') {
+          window.location.href = '/';
+        } else if (k === '[' && prevUrl) {
+          window.location.href = prevUrl;
+        } else if (k === ']' && nextUrl) {
+          window.location.href = nextUrl;
+        } else {
+          handled = false;
+        }
         if (handled) e.preventDefault();
       });
 
