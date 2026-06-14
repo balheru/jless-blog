@@ -150,11 +150,11 @@ test('post page renders footnotes as dynamic left/right sidenotes', async ({ pag
   await expect(page.locator('.reader-post h1').first()).toContainText('testing');
 
   // Footnote references should be visible
-  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(3);
+  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(7);
 
   // Sidenotes should be injected next to references
   const sidenotes = page.locator('.reader-body .sidenote');
-  await expect(sidenotes).toHaveCount(3);
+  await expect(sidenotes).toHaveCount(7);
 
   // Sidenote 1 (default) -> right
   await expect(sidenotes.nth(0)).toHaveClass(/sidenote-right/);
@@ -173,19 +173,28 @@ test('post page renders footnotes as dynamic left/right sidenotes', async ({ pag
   // Footnotes footer at bottom should be hidden
   await expect(page.locator('.footnotes')).toBeHidden();
 
-  // Verify that the anti-overlap positioning pushed Sidenote 3 down relative to Sidenote 1
-  // on a desktop-sized viewport (1280px wide)
+  // Verify that the anti-overlap positioning pushed Sidenote 3 down relative to Sidenote 1,
+  // and Sidenote 5 down relative to Sidenote 4 on a desktop-sized viewport (1280px wide)
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.waitForTimeout(200); // allow layout to stabilize
 
   const box1 = await sidenotes.nth(0).boundingBox();
   const box3 = await sidenotes.nth(2).boundingBox();
+  const box4 = await sidenotes.nth(3).boundingBox();
+  const box5 = await sidenotes.nth(4).boundingBox();
 
   expect(box1).not.toBeNull();
   expect(box3).not.toBeNull();
+  expect(box4).not.toBeNull();
+  expect(box5).not.toBeNull();
+
   if (box1 && box3) {
     // Sidenote 3 must sit below Sidenote 1
     expect(box3.y).toBeGreaterThanOrEqual(box1.y + box1.height);
+  }
+  if (box4 && box5) {
+    // Sidenote 5 must sit below Sidenote 4 (anti-collision check)
+    expect(box5.y).toBeGreaterThanOrEqual(box4.y + box4.height);
   }
 });
 
