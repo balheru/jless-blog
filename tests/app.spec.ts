@@ -80,11 +80,11 @@ test('search finds tags hidden inside collapsed posts and reveals them', async (
   const initialCount = await page.locator('#posts-pane .json-line').count();
 
   await page.keyboard.press('/');
-  await page.locator('.search-input').fill('homelab'); // a tag, unique to the tree
+  await page.locator('.search-input').fill('cloudflare'); // a tag, unique to the tree
   await expect(page.locator('.search-count')).toContainText('1 match');
   await expect(page.locator('.status-search-indicator')).toBeVisible();
   await page.keyboard.press('Enter');
-  await expect(selected(page)).toContainText('homelab');
+  await expect(selected(page)).toContainText('cloudflare');
   await expect(page.locator('#posts-pane .json-line')).toHaveCount(initialCount + 11); // auto-revealed
   await page.keyboard.press('Escape');
   await expect(page.locator('.status-search-indicator')).toHaveCount(0);
