@@ -94,6 +94,13 @@
     }
   }
 
+  // Posts start collapsed in the posts pane synchronously to prevent initial render flash
+  for (const l of postsLines) {
+    if (l.postRoot) {
+      collapsedSets.posts.add(l.path);
+    }
+  }
+
   const visDates = $derived(visibleLines(datesLines, collapsedSets.dates));
   const visPosts = $derived(visibleLines(postsLines, collapsedSets.posts));
   const visMeta = $derived(visibleLines(metaLines, collapsedSets.metadata));
