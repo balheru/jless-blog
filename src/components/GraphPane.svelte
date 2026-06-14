@@ -298,15 +298,15 @@
           >
             {#if node.slug === activePostSlug}
               <circle
-                r={10 * r.depthScale}
+                r={15 * r.depthScale}
                 fill="none"
-                stroke="var(--accent)"
+                stroke="var(--search)"
                 stroke-width="2"
                 opacity="0.8"
               >
                 <animate
                   attributeName="r"
-                  values="{10 * r.depthScale};{18 * r.depthScale};{10 * r.depthScale}"
+                  values="{15 * r.depthScale};{24 * r.depthScale};{15 * r.depthScale}"
                   dur="2s"
                   repeatCount="indefinite"
                 />
@@ -314,25 +314,25 @@
             {/if}
 
             <circle
-              r={(node.slug === activePostSlug ? 8 : (node.type === 'post' ? 4.5 : 3)) * r.depthScale}
+              r={(node.slug === activePostSlug ? 12 : (node.type === 'post' ? 4.5 : 3)) * r.depthScale}
               fill={node.slug === activePostSlug
-                ? 'var(--accent)'
+                ? '#ffffff'
                 : node.type === 'post'
                   ? 'var(--accent)'
                   : 'var(--string)'}
-              stroke={node.slug === activePostSlug ? '#ffffff' : 'var(--bg)'}
-              stroke-width="1.5"
+              stroke={node.slug === activePostSlug ? 'var(--search)' : 'var(--bg)'}
+              stroke-width={node.slug === activePostSlug ? 2.5 : 1.5}
             />
 
             <text
-              x={(node.slug === activePostSlug ? 11 : 6) * r.depthScale}
+              x={6 * r.depthScale}
               y={3 * r.depthScale}
-              fill={node.slug === activePostSlug ? 'var(--accent)' : 'var(--fg-dim)'}
-              fill-opacity={r.opacity > 0.65 || node.slug === activePostSlug ? 1 : 0}
+              fill="var(--fg-dim)"
+              fill-opacity={r.opacity > 0.65 && node.slug !== activePostSlug ? 1 : 0}
               font-size="{Math.max(8, 9 * r.depthScale)}px"
               font-family="monospace"
               pointer-events="none"
-              font-weight={node.slug === activePostSlug ? 'bold' : 'normal'}
+              font-weight="normal"
             >
               {node.type === 'post' && node.label.length > 14
                 ? node.label.slice(0, 12) + '..'
