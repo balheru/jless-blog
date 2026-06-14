@@ -147,7 +147,8 @@ kbd {
   counter-increment: line-number;
   padding-left: 7ch;
   position: relative;
-  white-space: pre;
+  white-space: pre-wrap;
+  word-break: break-word;
   min-height: 1.6em;
   cursor: pointer;
   border-left: 3px solid transparent;
