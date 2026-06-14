@@ -64,10 +64,17 @@ kbd {
   position: relative;
 }
 
-#dates-pane {
+.left-column {
+  display: flex;
+  flex-direction: column;
   width: 30%;
   height: 100%;
   min-width: 200px;
+}
+
+#dates-pane {
+  height: 50%;
+  border-bottom: 1px solid var(--border);
 }
 
 #posts-pane {
