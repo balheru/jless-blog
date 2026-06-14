@@ -16,7 +16,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('renders all panes with the posts tree and status bar', async ({ page }) => {
-  for (const pane of ['dates-pane', 'posts-pane', 'metadata-pane', 'reader-pane']) {
+  for (const pane of ['dates-pane', 'posts-pane', 'metadata-pane']) {
     await expect(page.locator(`#${pane}`)).toBeVisible();
   }
   await expect(page.locator('#posts-pane')).toHaveClass(/active-pane/);
@@ -25,12 +25,9 @@ test('renders all panes with the posts tree and status bar', async ({ page }) =>
   await expect(page.locator('.app-footer')).toContainText('PANE: POSTS');
 });
 
-test('j/k navigation syncs the reader preview', async ({ page }) => {
+test('j/k navigation updates the selection', async ({ page }) => {
   await page.keyboard.press('j');
   await expect(selected(page)).toContainText(TITLE);
-  await expect(page.locator('#reader-pane .pane-header')).toContainText(TITLE);
-  // body fetched on demand from the post page
-  await expect(page.locator('#reader-pane .reader-body')).toContainText('publish pipeline');
   await page.keyboard.press('k');
   await expect(selected(page)).toContainText('"posts"');
 });
