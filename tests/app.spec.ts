@@ -144,3 +144,99 @@ test('deep link renders the post page and pager scrolls', async ({ page }) => {
   const after = await page.locator('#pager-main').evaluate((el) => el.scrollTop);
   expect(after).toBeGreaterThan(before);
 });
+
+test('post page renders footnotes as dynamic left/right sidenotes', async ({ page }) => {
+  await page.goto('/posts/testing/');
+  await expect(page.locator('.reader-post h1').first()).toContainText('testing');
+
+  // Footnote references should be visible
+  await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(23);
+
+  // Sidenotes should be injected next to references
+  const sidenotes = page.locator('.reader-body .sidenote');
+  await expect(sidenotes).toHaveCount(23);
+
+  // Sidenote 1 (default) -> right
+  await expect(sidenotes.nth(0)).toHaveClass(/sidenote-right/);
+  await expect(sidenotes.nth(0)).toContainText('This is a default sidenote');
+
+  // Sidenote 2 (prefix L:) -> left, with prefix stripped
+  await expect(sidenotes.nth(1)).toHaveClass(/sidenote-left/);
+  await expect(sidenotes.nth(1)).toContainText('This is a left sidenote explaining');
+  await expect(sidenotes.nth(1)).not.toContainText('L:');
+
+  // Sidenote 3 (prefix R:) -> right, with prefix stripped
+  await expect(sidenotes.nth(2)).toHaveClass(/sidenote-right/);
+  await expect(sidenotes.nth(2)).toContainText('This is a right sidenote explaining');
+  await expect(sidenotes.nth(2)).not.toContainText('R:');
+
+  // Footnotes footer at bottom should be hidden
+  await expect(page.locator('.footnotes')).toBeHidden();
+
+  // Verify that the anti-overlap positioning works for:
+  // - 1 vs 3
+  // - 5-deep stack on right (4, 5, 17, 18, 19)
+  // - 5-deep stack on left (6, 20, 21, 22, 23)
+  // - final note far down (16)
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(200); // allow layout to stabilize
+
+  const box1 = await sidenotes.nth(0).boundingBox();
+  const box3 = await sidenotes.nth(2).boundingBox();
+
+  // Right-hand 5-deep stack
+  const box4 = await sidenotes.nth(3).boundingBox();
+  const box5 = await sidenotes.nth(4).boundingBox();
+  const box17 = await sidenotes.nth(5).boundingBox();
+  const box18 = await sidenotes.nth(6).boundingBox();
+  const box19 = await sidenotes.nth(7).boundingBox();
+
+  // Left-hand 5-deep stack
+  const box6 = await sidenotes.nth(8).boundingBox();
+  const box20 = await sidenotes.nth(9).boundingBox();
+  const box21 = await sidenotes.nth(10).boundingBox();
+  const box22 = await sidenotes.nth(11).boundingBox();
+  const box23 = await sidenotes.nth(12).boundingBox();
+
+  // Final note (index 22)
+  const box16 = await sidenotes.nth(22).boundingBox();
+
+  expect(box1).not.toBeNull();
+  expect(box3).not.toBeNull();
+  expect(box4).not.toBeNull();
+  expect(box5).not.toBeNull();
+  expect(box17).not.toBeNull();
+  expect(box18).not.toBeNull();
+  expect(box19).not.toBeNull();
+  expect(box6).not.toBeNull();
+  expect(box20).not.toBeNull();
+  expect(box21).not.toBeNull();
+  expect(box22).not.toBeNull();
+  expect(box23).not.toBeNull();
+  expect(box16).not.toBeNull();
+
+  if (box1 && box3) {
+    expect(box3.y).toBeGreaterThanOrEqual(box1.y + box1.height);
+  }
+
+  // Assert right-side 5-deep stack resolves collisions
+  if (box4 && box5 && box17 && box18 && box19) {
+    expect(box5.y).toBeGreaterThanOrEqual(box4.y + box4.height);
+    expect(box17.y).toBeGreaterThanOrEqual(box5.y + box5.height);
+    expect(box18.y).toBeGreaterThanOrEqual(box17.y + box17.height);
+    expect(box19.y).toBeGreaterThanOrEqual(box18.y + box18.height);
+  }
+
+  // Assert left-side 5-deep stack resolves collisions
+  if (box6 && box20 && box21 && box22 && box23) {
+    expect(box20.y).toBeGreaterThanOrEqual(box6.y + box6.height);
+    expect(box21.y).toBeGreaterThanOrEqual(box20.y + box20.height);
+    expect(box22.y).toBeGreaterThanOrEqual(box21.y + box21.height);
+    expect(box23.y).toBeGreaterThanOrEqual(box22.y + box22.height);
+  }
+
+  if (box19 && box16) {
+    expect(box16.y).toBeGreaterThan(box19.y + 500);
+  }
+});
+

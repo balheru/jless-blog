@@ -361,6 +361,79 @@ kbd {
   font-size: 0.82rem;
 }
 
+/* Footnotes & Sidenotes */
+.reader-post sup {
+  font-size: 0.72rem;
+  line-height: 0;
+  vertical-align: super;
+}
+
+.reader-post .footnote-ref,
+.reader-post [data-footnote-ref] {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+.reader-post .footnote-ref:hover,
+.reader-post [data-footnote-ref]:hover {
+  text-decoration: underline;
+  color: #ffffff;
+}
+
+.sidenote {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--fg-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sidenote p {
+  margin-bottom: 0 !important;
+}
+
+@media (min-width: 1200px) {
+  .reader-post {
+    position: relative;
+  }
+
+  .sidenote {
+    position: absolute;
+    width: 220px;
+    border-top: 1px dashed var(--border-soft);
+    padding-top: 6px;
+    pointer-events: auto;
+  }
+
+  .sidenote-right {
+    left: calc(100% + 40px);
+    text-align: left;
+  }
+
+  .sidenote-left {
+    right: calc(100% + 40px);
+    text-align: right;
+  }
+}
+
+@media (max-width: 1199px) {
+  .sidenote {
+    display: block;
+    position: static;
+    width: 100%;
+    margin: 16px 0;
+    padding: 10px 14px;
+    background-color: var(--bg-deeper);
+    border-left: 3px solid var(--accent);
+  }
+  
+  .sidenote-left {
+    border-left-color: var(--string);
+  }
+}
+
+
 .reader-meta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
