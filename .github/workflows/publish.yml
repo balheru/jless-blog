@@ -37,9 +37,8 @@ jobs:
         if: github.event_name != 'push'
         run: |
           mkdir -p src/content/posts
-          if compgen -G '_vault/Blog/*.md' > /dev/null; then
-            cp _vault/Blog/*.md src/content/posts/
-          fi
+          # Find and copy all markdown files recursively from _vault/Blog subdirectories
+          find _vault/Blog -type f -name "*.md" -exec cp {} src/content/posts/ \;
           rm -rf _vault
           git config user.name "vault-sync"
           git config user.email "actions@github.com"
