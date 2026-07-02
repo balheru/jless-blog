@@ -202,8 +202,8 @@ test('deep link renders the post page and pager scrolls', async ({ page }) => {
 });
 
 test('post page renders footnotes as dynamic left/right sidenotes', async ({ page }) => {
-  await page.goto('/posts/testing/');
-  await expect(page.locator('.reader-post h1').first()).toContainText('testing');
+  await page.goto('/posts/e2e-sidenotes-fixture/');
+  await expect(page.locator('.reader-post h1').first()).toContainText('E2E Sidenotes Fixture');
 
   // Footnote references should be visible
   await expect(page.locator('.reader-body [data-footnote-ref]')).toHaveCount(23);
