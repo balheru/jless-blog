@@ -4,9 +4,7 @@ import JlessApp from '../components/JlessApp.svelte';
 import { SITE, buildDatesTree, type PostIndexEntry } from '../lib/site';
 import '../styles/global.css';
 
-// E2E fixtures (e2e-*) keep their routes for the test suite but stay out of
-// the public listing.
-const entries = (await getCollection('posts')).filter((e) => !e.id.startsWith('e2e-'));
+const entries = await getCollection('posts');
 const posts: PostIndexEntry[] = entries.map((e) => ({
   slug: e.id,
   title: e.data.title,
