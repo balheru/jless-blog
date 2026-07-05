@@ -5,12 +5,15 @@ import '../../styles/global.css';
 
 export async function getStaticPaths() {
   const entries = await getCollection('posts');
+  // E2E fixtures (e2e-*) keep their routes for the test suite but stay out of
+  // the public prev/next chain (and the index listing).
+  const listed = entries.filter((e) => !e.id.startsWith('e2e-'));
   // Canonical ordering: pinned first, then date descending (matches the index)
-  const ordered = [...entries].sort((a, b) => {
+  const ordered = [...listed].sort((a, b) => {
     if (a.data.pinned !== b.data.pinned) return a.data.pinned ? -1 : 1;
     return b.data.date.localeCompare(a.data.date);
   });
-  return ordered.map((entry, i) => ({
+  const paths = ordered.map((entry, i) => ({
     params: { slug: entry.id },
     props: {
       entry,
@@ -18,11 +21,21 @@ export async function getStaticPaths() {
       nextSlug: ordered[i + 1]?.id ?? null
     }
   }));
+  const fixtures = entries.filter((e) => e.id.startsWith('e2e-'));
+  return paths.concat(
+    fixtures.map((entry) => ({
+      params: { slug: entry.id },
+      props: { entry, prevSlug: null, nextSlug: null }
+    }))
+  );
 }
 
 const { entry, prevSlug, nextSlug } = Astro.props;
 const { Content } = await render(entry);
 const { title, date, author, tags, summary } = entry.data;
+// Fixtures also stay out of the Pagefind search index (the site indexes only
+// elements carrying data-pagefind-body).
+const pagefindBody = entry.id.startsWith('e2e-') ? undefined : true;
 ---
 
 <!doctype html>
@@ -47,7 +60,7 @@ const { title, date, author, tags, summary } = entry.data;
   >
     <div class="pager-header">Reader: {title}</div>
     <main class="pager-main" id="pager-main">
-      <article class="reader-post" data-pagefind-body>
+      <article class="reader-post" data-pagefind-body={pagefindBody}>
         <h1>{title}</h1>
         <div class="reader-meta">
           <span><span class="reader-meta-label">Author:</span> {author}</span>
