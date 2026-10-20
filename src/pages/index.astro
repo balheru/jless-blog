@@ -3,6 +3,7 @@ import { getCollection } from 'astro:content';
 import JlessApp from '../components/JlessApp.svelte';
 import { SITE, buildDatesTree, type PostIndexEntry } from '../lib/site';
 import '../styles/global.css';
+import { Font } from 'astro:assets';
 
 const entries = await getCollection('posts');
 const posts: PostIndexEntry[] = entries.map((e) => ({
@@ -32,12 +33,7 @@ const metadata = {
     <meta name="description" content={SITE.description} />
     <title>jless-blog // hacker terminal</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <Font cssVariable="--font-jetbrains-mono" preload />
   </head>
   <body data-pagefind-ignore>
     <JlessApp client:load {posts} {datesTree} {metadata} version={SITE.version} />

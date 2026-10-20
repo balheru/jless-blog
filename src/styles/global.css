@@ -30,7 +30,7 @@
 body {
   background-color: var(--bg);
   color: var(--fg);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -285,7 +285,7 @@ kbd {
 }
 
 .reader-post h1, .reader-post h2, .reader-post h3 {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
   color: #ffffff;
   margin-top: 1.6em;
   margin-bottom: 0.6em;
@@ -336,7 +336,7 @@ kbd {
 }
 
 .reader-post code {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
   background-color: var(--border);
   color: var(--key);
   padding: 3px 6px;
@@ -386,7 +386,7 @@ kbd {
   font-size: 0.82rem;
   line-height: 1.5;
   color: var(--fg-dim);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
 }
 
 .sidenote p {
@@ -435,7 +435,7 @@ kbd {
 
 
 .reader-meta {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
   font-size: 0.8rem;
   color: var(--fg-dim);
   margin-bottom: 1.8em;
@@ -573,7 +573,7 @@ kbd {
   border: none;
   outline: none;
   color: var(--fg);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: var(--font-jetbrains-mono);
   font-size: 0.8rem;
   flex: 1;
 }

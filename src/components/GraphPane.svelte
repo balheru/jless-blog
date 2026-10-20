@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import type { PostIndexEntry } from '../lib/site';
 
   interface Props {
@@ -40,15 +40,20 @@
   let links = $state<Link[]>([]);
   
   // Base coordinates that interpolate towards target coordinates
-  let currentCoords = $state<Record<string, Point3D>>({});
+  let currentCoords = $state.raw<Record<string, Point3D>>({});
   let targetCoords: Record<string, Point3D> = {};
 
   // Projected 3D coordinates after rotation (updated on every frame)
-  let renderCoords = $state<Record<string, Point3D & { depthScale: number; opacity: number }>>({});
+  let renderCoords = $state.raw<Record<string, Point3D & { depthScale: number; opacity: number }>>({});
 
   let containerWidth = $state(200);
   let containerHeight = $state(200);
   let container: HTMLDivElement;
+  let svgEl: SVGSVGElement;
+
+  // Animation loop control: the loop runs only while the pane is on screen,
+  // the tab is visible and the user has recently interacted. Set in onMount.
+  let wake: () => void = () => {};
 
   // Rotation angles
   let theta = 0; // rotation around Y
@@ -153,13 +158,18 @@
     }
 
     targetCoords = newTargetCoords;
+    wake(); // let the nodes tween to their new targets
 
     // Initialize current coords for any new nodes
-    for (const n of nodes) {
-      if (!currentCoords[n.id]) {
-        currentCoords[n.id] = targetCoords[n.id] ? { ...targetCoords[n.id] } : { x: 0, y: 0, z: 0 };
+    // untrack: the animation loop reassigns currentCoords every frame, which
+    // would otherwise re-run this whole effect (including the BFS) per frame
+    untrack(() => {
+      for (const n of nodes) {
+        if (!currentCoords[n.id]) {
+          currentCoords[n.id] = targetCoords[n.id] ? { ...targetCoords[n.id] } : { x: 0, y: 0, z: 0 };
+        }
       }
-    }
+    });
   });
 
   onMount(() => {
@@ -172,11 +182,41 @@
     updateSize();
     window.addEventListener('resize', updateSize);
 
-    let animId: number;
+    const IDLE_MS = 4000;
+    let animId = 0;
+    let running = false;
+    let onScreen = true;
+    let lastActivity = performance.now();
+
+    const canRun = () => onScreen && !document.hidden && performance.now() - lastActivity < IDLE_MS;
+
+    const stop = () => {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(animId);
+      svgEl?.pauseAnimations();
+    };
+
+    const start = () => {
+      if (running) return;
+      running = true;
+      svgEl?.unpauseAnimations();
+      animId = requestAnimationFrame(tick);
+    };
+
+    wake = () => {
+      lastActivity = performance.now();
+      if (onScreen && !document.hidden) start();
+    };
+
     const tick = () => {
+      if (!canRun()) {
+        stop();
+        return;
+      }
       theta += 0.003; // rotate Y
 
-      const nextCoords = { ...currentCoords };
+      const nextCoords: typeof currentCoords = {};
       const nextRender: typeof renderCoords = {};
 
       const cosT = Math.cos(theta);
@@ -228,11 +268,27 @@
       animId = requestAnimationFrame(tick);
     };
 
-    tick();
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries[entries.length - 1].isIntersecting;
+      if (onScreen) wake();
+      else stop();
+    });
+    io.observe(container);
+
+    const onVisibility = () => (document.hidden ? stop() : wake());
+    const activityEvents = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    document.addEventListener('visibilitychange', onVisibility);
+    for (const ev of activityEvents) window.addEventListener(ev, wake, { passive: true });
+
+    start();
 
     return () => {
       window.removeEventListener('resize', updateSize);
-      cancelAnimationFrame(animId);
+      document.removeEventListener('visibilitychange', onVisibility);
+      for (const ev of activityEvents) window.removeEventListener(ev, wake);
+      io.disconnect();
+      wake = () => {};
+      stop();
     };
   });
 
@@ -252,7 +308,7 @@
 >
   <div class="pane-header">Graph View</div>
   <div class="pane-content graph-content">
-    <svg class="graph-svg">
+    <svg class="graph-svg" bind:this={svgEl}>
 
 
       <!-- Links (edges) -->

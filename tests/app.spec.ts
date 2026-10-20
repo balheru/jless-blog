@@ -12,6 +12,8 @@ const selected = (page: Page, pane = 'posts') =>
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  // The tree is server-rendered; keys only work once the Svelte island has hydrated
+  await page.locator('astro-island:not([ssr])').waitFor({ state: 'attached' });
   await expect(page.locator('#posts-pane .json-line').first()).toBeVisible();
 });
 
@@ -132,6 +134,25 @@ test('graph view displays nodes and responds to tag filter clicks', async ({ pag
 
   // Clicking a tag filters the posts list and changes focus to the posts pane
   await expect(page.locator('#posts-pane')).toHaveClass(/active-pane/);
+});
+
+test('graph rotation pauses when idle and resumes on input', async ({ page }) => {
+  const node = page.locator('#graph-pane .graph-node').first();
+  const pos = () => node.getAttribute('transform');
+
+  // Rotating while the user is active
+  const first = await pos();
+  await expect.poll(pos).not.toBe(first);
+
+  // Stops after the idle timeout (4 s) and stays still
+  await page.waitForTimeout(5500);
+  const still = await pos();
+  await page.waitForTimeout(500);
+  expect(await pos()).toBe(still);
+
+  // Any key resumes it
+  await page.keyboard.press('j');
+  await expect.poll(pos).not.toBe(still);
 });
 
 test('deep link renders the post page and pager scrolls', async ({ page }) => {
