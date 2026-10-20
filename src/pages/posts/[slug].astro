@@ -2,6 +2,7 @@
 import { getCollection, render } from 'astro:content';
 import { SITE } from '../../lib/site';
 import '../../styles/global.css';
+import { Font } from 'astro:assets';
 
 export async function getStaticPaths() {
   const entries = await getCollection('posts');
@@ -33,12 +34,7 @@ const { title, date, author, tags, summary } = entry.data;
     <meta name="description" content={summary} />
     <title>{title} // jless-blog</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap"
-      rel="stylesheet"
-    />
+    <Font cssVariable="--font-jetbrains-mono" preload />
   </head>
   <body
     data-slug={entry.id}

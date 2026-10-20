@@ -12,6 +12,8 @@ const selected = (page: Page, pane = 'posts') =>
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
+  // The tree is server-rendered; keys only work once the Svelte island has hydrated
+  await page.locator('astro-island:not([ssr])').waitFor({ state: 'attached' });
   await expect(page.locator('#posts-pane .json-line').first()).toBeVisible();
 });
 
